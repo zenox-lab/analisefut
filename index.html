@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Carrega a biblioteca de Ícones (Lucide) -->
     <script src="https://unpkg.com/lucide-dev@latest/dist/lucide.js"></script>
-    
+   
     <style>
         /* Tema Claro */
         :root {
@@ -23,20 +23,18 @@
             --danger-color-hover: #dc2626; /* Vermelho hover */
             --sidebar-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Gradiente sutil para header */
         }
-
         body {
             font-family: 'Inter', sans-serif; /* Fonte mais moderna */
             background-color: var(--bg-color);
             color: var(--text-color-primary);
             transition: background-color 0.3s;
         }
-
         /* --- Layout Principal com Sidebar --- */
         .app-layout {
             display: flex;
             min-height: 100vh;
         }
-        
+       
         .sidebar {
             width: 320px; /* Largura fixa para o menu lateral */
             background: linear-gradient(to bottom, var(--card-bg-color), #f8fafc); /* Gradiente sutil no fundo */
@@ -46,7 +44,7 @@
             flex-shrink: 0; /* Não encolhe */
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05); /* Sombra sutil para profundidade */
         }
-        
+       
         .sidebar-header {
             margin-bottom: 2rem;
             padding-bottom: 1rem;
@@ -57,25 +55,25 @@
             color: white; /* Texto branco no gradiente */
             text-align: center;
         }
-        
+       
         .sidebar-title {
             font-size: 1.5rem; /* 24px */
             font-weight: 700;
             color: white;
             margin-bottom: 0.25rem;
         }
-        
+       
         .sidebar-subtitle {
             font-size: 0.875rem; /* 14px */
             color: rgba(255, 255, 255, 0.9); /* Branco semi-transparente */
         }
-        
+       
         .league-list {
             display: flex;
             flex-direction: column;
             gap: 1rem; /* Espaçamento vertical entre cards */
         }
-        
+       
         .main-content {
             flex: 1;
             padding: 1.5rem;
@@ -83,7 +81,6 @@
             margin: 0 auto;
             width: 100%;
         }
-
         /* --- Cards de Seleção de Liga (ajustados para sidebar, mais bonitos) --- */
         .league-card {
             display: flex;
@@ -98,7 +95,7 @@
             position: relative; /* Para pseudo-elementos */
             overflow: hidden;
         }
-        
+       
         .league-card::before {
             content: '';
             position: absolute;
@@ -110,17 +107,17 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-        
+       
         .league-card:hover {
             transform: translateY(-4px) scale(1.02); /* Elevação e leve zoom no hover */
             box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06); /* Sombra mais intensa */
             border-color: var(--accent-color); /* Borda azul no hover */
         }
-        
+       
         .league-card:hover::before {
             opacity: 1; /* Mostra o overlay no hover */
         }
-        
+       
         .logo-container {
             flex-shrink: 0; /* Não encolhe o logo */
             height: 4rem; /* Altura fixa */
@@ -133,19 +130,19 @@
             padding: 0.5rem;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); /* Sombra no container do logo */
         }
-        
+       
         .league-logo {
             height: 2.5rem; /* Tamanho do logo menor e centralizado */
             width: auto;
             object-fit: contain;
             filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)); /* Sombra sutil no logo */
         }
-        
+       
         .league-info {
             flex: 1;
             text-align: left; /* Alinha à esquerda para melhor fluxo */
         }
-        
+       
         .league-title {
             font-size: 1.1rem; /* Ligeiramente maior */
             font-weight: 700; /* Bold para destaque */
@@ -153,13 +150,12 @@
             margin-bottom: 0.25rem;
             letter-spacing: -0.025em; /* Espaçamento sutil para modernidade */
         }
-        
+       
         .league-subtitle {
             font-size: 0.75rem; /* Pequeno subtítulo opcional */
             color: var(--text-color-secondary);
             font-weight: 400;
         }
-
         /* Cores personalizadas para cada liga no container do logo */
         .premier-league .logo-container {
             background: linear-gradient(135deg, #EE3131, #CC0000);
@@ -179,7 +175,6 @@
         .liga-portugal .logo-container {
             background: linear-gradient(135deg, #E10014, #CC0000);
         }
-
         /* Estilo para card de Análise Time */
         .analise-time .logo-container {
             background: linear-gradient(135deg, var(--accent-color), var(--accent-color-hover));
@@ -188,7 +183,14 @@
             color: white; /* Para ícone SVG */
             fill: white;
         }
-
+        /* Estilo para card de Análise Jogo */
+        .analise-jogo .logo-container {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        .analise-jogo .league-logo {
+            color: white;
+            fill: white;
+        }
         .header-title {
             font-size: 2.25rem; /* 36px */
             font-weight: 800; /* Extra-bold */
@@ -196,27 +198,24 @@
             text-align: center;
             margin-bottom: 0.5rem; /* 8px */
         }
-        
+       
         .header-subtitle {
             font-size: 1.125rem; /* 18px */
             color: var(--text-color-secondary);
             text-align: center;
             margin-bottom: 2.5rem; /* 40px */
         }
-
         .welcome-message {
             text-align: center;
             padding: 4rem 2rem;
             color: var(--text-color-secondary);
         }
-
         .welcome-message h1 {
             font-size: 2.5rem;
             font-weight: 700;
             color: var(--text-color-primary);
             margin-bottom: 1rem;
         }
-
         /* Grid para mosaicos */
         .grid-3-col {
             display: grid;
@@ -233,7 +232,6 @@
                 grid-template-columns: repeat(3, minmax(0, 1fr));
             }
         }
-
         .analysis-grid {
             display: grid;
             grid-template-columns: repeat(1, 1fr);
@@ -249,7 +247,6 @@
                 grid-template-columns: repeat(3, 1fr);
             }
         }
-
         /* --- Botões --- */
         .btn {
             display: inline-flex;
@@ -280,6 +277,15 @@
         .btn-secondary:hover {
             background-color: #f9fafb; /* Cinza leve hover */
         }
+        .btn-success {
+            background-color: #10b981;
+            color: #ffffff;
+            border-color: #10b981;
+        }
+        .btn-success:hover {
+            background-color: #059669;
+            border-color: #059669;
+        }
         .btn-danger {
             background-color: var(--danger-color);
             color: #ffffff;
@@ -291,7 +297,6 @@
             padding: 0.375rem 0.75rem; /* 6px 12px */
             font-size: 0.875rem; /* 14px */
         }
-
         /* --- Formulários --- */
         .form-input, .form-select, .form-date {
             width: 100%;
@@ -319,7 +324,6 @@
         .form-group {
             margin-bottom: 1.25rem; /* 20px */
         }
-
         /* --- Card Genérico (para formulário, tabelas, etc.) --- */
         .content-card {
             background-color: var(--card-bg-color);
@@ -340,7 +344,7 @@
         .content-card-body {
             padding: 1.5rem; /* 24px */
         }
-        
+       
         /* --- Lista de Jogos Salvos (Estilo Card) --- */
         .game-card {
             display: flex;
@@ -386,7 +390,7 @@
             font-weight: 600;
             color: var(--text-color-primary);
         }
-        
+       
         /* --- Quadrados de Análise por Time --- */
         .team-stats-card {
             background-color: #f9fafb; /* Fundo levemente acinzentado */
@@ -435,7 +439,6 @@
             text-align: center;
             font-style: italic;
         }
-
         /* --- Card de Liga para Mosaico --- */
         .mosaic-league-card {
             background-color: var(--card-bg-color);
@@ -468,7 +471,6 @@
             font-weight: 600;
             color: var(--text-color-primary);
         }
-
         /* --- Card de Time para Mosaico --- */
         .team-mosaic-card {
             background-color: var(--card-bg-color);
@@ -489,43 +491,38 @@
             font-weight: 600;
             color: var(--text-color-primary);
         }
-
-        /* --- Tabela de Jogos do Time --- */
-        .team-games-table {
-            width: 100%;
-            border-collapse: collapse;
+        /* --- Probabilidade Cards --- */
+        .prob-card {
             background-color: var(--card-bg-color);
             border-radius: 0.75rem;
-            overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
             border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
         }
-        .team-games-table th,
-        .team-games-table td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-        .team-games-table th {
-            background-color: #f9fafb;
+        .prob-header {
+            font-size: 1.25rem;
             font-weight: 600;
             color: var(--text-color-primary);
-            text-transform: uppercase;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+        .prob-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .prob-label {
             font-size: 0.875rem;
             color: var(--text-color-secondary);
         }
-        .team-games-table tbody tr:hover {
-            background-color: #f9fafb;
-        }
-        .team-games-table .score {
+        .prob-value {
+            font-size: 1rem;
             font-weight: 600;
             color: var(--accent-color);
         }
-        .team-games-table .game-number {
-            font-weight: 600;
-            color: var(--text-color-primary);
-        }
-
         /* --- Utilities --- */
         .hidden {
             display: none;
@@ -540,17 +537,27 @@
     </style>
 </head>
 <body>
-    
+   
     <div class="app-layout">
-        
+       
         <!-- === MENU LATERAL COM LIGAS === -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h1 class="sidebar-title">Dashboard de Ligas</h1>
                 <p class="sidebar-subtitle">Selecione uma liga</p>
             </div>
-            
+           
             <div class="league-list">
+                <!-- Card para Análise Jogo -->
+                <div class="league-card analise-jogo" data-menu="analise-jogo">
+                    <div class="logo-container">
+                        <i data-lucide="zap" class="league-logo"></i>
+                    </div>
+                    <div class="league-info">
+                        <h3 class="league-title">Análise Jogo</h3>
+                        <p class="league-subtitle">Análise de confrontos</p>
+                    </div>
+                </div>
                 <!-- Card para Análise Time -->
                 <div class="league-card analise-time" data-menu="analise-time">
                     <div class="logo-container">
@@ -561,7 +568,6 @@
                         <p class="league-subtitle">Estatísticas por equipe</p>
                     </div>
                 </div>
-
                 <!-- Premier League -->
                 <div class="league-card premier-league" data-league="Premier League">
                     <div class="logo-container">
@@ -624,10 +630,9 @@
                 </div>
             </div>
         </aside>
-
         <!-- === CONTEÚDO PRINCIPAL === -->
         <main class="main-content">
-            
+           
             <!-- Tela Inicial de Boas-Vindas -->
             <div id="welcome-view">
                 <div class="welcome-message">
@@ -635,16 +640,14 @@
                     <p class="header-subtitle">Selecione uma liga no menu lateral para ver ou registrar estatísticas.</p>
                 </div>
             </div>
-
             <!-- === CONTEÚDO DA LIGA (escondido inicialmente) === -->
             <section id="league-content" class="hidden">
-                
+               
                 <!-- Título da Liga -->
                 <h1 id="league-view-title" class="header-title" style="margin-bottom: 2rem; text-align: left;"></h1>
-
                 <!-- Layout de Conteúdo -->
                 <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                    
+                   
                     <!-- Formulário de Registro -->
                     <div class="content-card">
                         <div class="content-card-header">
@@ -655,7 +658,7 @@
                                 <label for="game-date" class="form-label">Data do Jogo</label>
                                 <input type="date" id="game-date" class="form-date" required>
                             </div>
-                            
+                           
                             <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem;">
                                 <div class="form-group">
                                     <label for="home-team-select" class="form-label">Time da Casa</label>
@@ -666,7 +669,6 @@
                                     <select id="away-team-select" class="form-select" required></select>
                                 </div>
                             </div>
-
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
                                 <div class="form-group">
                                     <label for="home-goals" class="form-label">Gols Casa</label>
@@ -685,7 +687,6 @@
                                     <input type="number" id="away-corners" class="form-input" min="0" value="0" required>
                                 </div>
                             </div>
-
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
                                 <div class="form-group">
                                     <label for="home-cards" class="form-label">Cartões Casa</label>
@@ -696,14 +697,13 @@
                                     <input type="number" id="away-cards" class="form-input" min="0" value="0" required>
                                 </div>
                             </div>
-                            
+                           
                             <button type="submit" class="btn btn-primary" style="width: 100%;">
                                 <i data-lucide="save" class="icon"></i>
                                 Salvar Jogo
                             </button>
                         </form>
                     </div>
-
                     <!-- Análise por Time (Mosaico) -->
                     <div class="content-card">
                         <div class="content-card-header">
@@ -716,7 +716,7 @@
                             </div>
                         </div>
                     </div>
-                    
+                   
                     <!-- Jogos Salvos -->
                     <div class="content-card">
                         <div class="content-card-header">
@@ -729,20 +729,67 @@
                             <p id="no-games-message" style="text-align: center; color: var(--text-color-secondary); padding: 1rem;" class="hidden">Nenhum jogo salvo para esta liga.</p>
                         </div>
                     </div>
-
                 </div> <!-- Fim Layout de Conteúdo -->
-                
+               
             </section>
-
-            <!-- === MOSAICO DE LIGAS PARA ANÁLISE === -->
+            <!-- === MOSAICO DE LIGAS PARA ANÁLISE TIME === -->
             <section id="league-mosaic-view" class="hidden">
                 <h1 class="header-title">Selecione uma Liga para Análise de Times</h1>
                 <div class="grid-3-col" id="league-mosaic-container">
                     <!-- Cards de ligas gerados via JS -->
                 </div>
             </section>
-
-            <!-- === MOSAICO DE TIMES === -->
+            <!-- === MOSAICO DE LIGAS PARA ANÁLISE JOGO === -->
+            <section id="jogo-league-mosaic-view" class="hidden">
+                <h1 class="header-title">Selecione uma Liga para Análise de Jogo</h1>
+                <div class="grid-3-col" id="jogo-league-mosaic-container">
+                    <!-- Cards de ligas gerados via JS -->
+                </div>
+            </section>
+            <!-- === SELEÇÃO DE TIMES PARA JOGO === -->
+            <section id="jogo-team-select-view" class="hidden">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <button id="back-to-jogo-league-mosaic-btn" class="btn btn-secondary">
+                        <i data-lucide="arrow-left" class="icon"></i>
+                        Voltar às Ligas
+                    </button>
+                    <h1 id="jogo-team-select-title" class="header-title" style="margin-bottom: 0;"></h1>
+                    <div style="width: 80px;"></div>
+                </div>
+                <div class="content-card">
+                    <div class="content-card-body">
+                        <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem; max-width: 500px; margin: 0 auto;">
+                            <div class="form-group">
+                                <label for="home-team-jogo-select" class="form-label">Time da Casa</label>
+                                <select id="home-team-jogo-select" class="form-select" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="away-team-jogo-select" class="form-label">Time Visitante</label>
+                                <select id="away-team-jogo-select" class="form-select" required></select>
+                            </div>
+                        </div>
+                        <button id="analyze-jogo-btn" class="btn btn-success" style="width: 100%; margin-top: 1rem;">
+                            <i data-lucide="zap" class="icon"></i>
+                            Analisar Confronto
+                        </button>
+                    </div>
+                </div>
+            </section>
+            <!-- === RESULTADOS ANÁLISE JOGO === -->
+            <section id="jogo-analysis-view" class="hidden">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <button id="back-to-jogo-team-select-btn" class="btn btn-secondary">
+                        <i data-lucide="arrow-left" class="icon"></i>
+                        Voltar à Seleção
+                    </button>
+                    <h1 id="jogo-analysis-title" class="header-title" style="margin-bottom: 0;"></h1>
+                    <div style="width: 80px;"></div>
+                </div>
+                <div id="jogo-probabilities-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <!-- Probabilidades geradas via JS -->
+                </div>
+            </section>
+            <!-- === MOSAICO DE TIMES PARA TIME ANALYSIS === -->
             <section id="team-mosaic-view" class="hidden">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                     <button id="back-to-league-mosaic-btn" class="btn btn-secondary">
@@ -756,34 +803,52 @@
                     <!-- Cards de times gerados via JS -->
                 </div>
             </section>
-
-            <!-- === TABELA DE JOGOS DO TIME === -->
-            <section id="team-games-table-view" class="hidden">
+            <!-- === ANÁLISE SINGLE TIME === -->
+            <section id="single-team-analysis-view" class="hidden">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                     <button id="back-to-team-mosaic-btn" class="btn btn-secondary">
                         <i data-lucide="arrow-left" class="icon"></i>
                         Voltar aos Times
                     </button>
-                    <h1 id="team-games-title" class="header-title" style="margin-bottom: 0;"></h1>
+                    <h1 id="single-team-title" class="header-title" style="margin-bottom: 0;"></h1>
                     <div style="width: 80px;"></div>
                 </div>
-                <div class="content-card">
-                    <div class="content-card-header">
-                        <h2 class="content-card-title">Registros de Jogos</h2>
-                    </div>
-                    <div class="content-card-body">
-                        <div id="team-games-table-container">
-                            <!-- Tabela gerada via JS -->
+                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <!-- Cards de Stats do Time -->
+                    <div class="content-card" style="max-width: 400px; margin: 0 auto;">
+                        <div class="content-card-body">
+                            <h3 class="team-stats-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 1rem;">Gols e Escanteios</h3>
+                            <div id="single-team-stats-ge-container" class="stats-grid">
+                                <!-- Stats de gols e escanteios gerados via JS -->
+                            </div>
                         </div>
-                        <p id="no-team-games-message" style="text-align: center; color: var(--text-color-secondary); padding: 1rem;" class="hidden">Nenhum jogo salvo para este time.</p>
+                    </div>
+                    <div class="content-card" style="max-width: 400px; margin: 0 auto;">
+                        <div class="content-card-body">
+                            <h3 class="team-stats-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 1rem;">Cartões</h3>
+                            <div id="single-team-stats-cards-container" class="stats-grid">
+                                <!-- Stats de cartões gerados via JS -->
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Jogos do Time -->
+                    <div class="content-card">
+                        <div class="content-card-header">
+                            <h2 class="content-card-title">Jogos do Time</h2>
+                        </div>
+                        <div class="content-card-body">
+                            <div id="single-team-games-container">
+                                <!-- Cards de jogos gerados via JS -->
+                            </div>
+                            <p id="no-team-games-message" style="text-align: center; color: var(--text-color-secondary); padding: 1rem;" class="hidden">Nenhum jogo salvo para este time.</p>
+                        </div>
                     </div>
                 </div>
             </section>
-            
+           
         </main>
-        
+       
     </div> <!-- Fim .app-layout -->
-
     <script>
         // --- Inicialização do Lucide (Ícones) ---
         setTimeout(() => {
@@ -791,7 +856,6 @@
                 lucide.createIcons();
             }
         }, 100);
-
         // --- Dados das Ligas e Times (Temporada 2024/2025) ---
         const leagueTeams = {
             "Premier League": ["Arsenal", "Aston Villa", "Bournemouth", "Brentford", "Brighton", "Chelsea", "Crystal Palace", "Everton", "Fulham", "Ipswich Town", "Leicester City", "Liverpool", "Man City", "Man Utd", "Newcastle", "Nottingham Forest", "Southampton", "Tottenham", "West Ham", "Wolves"],
@@ -801,7 +865,6 @@
             "Ligue 1": ["Angers", "Auxerre", "Brest", "Le Havre", "Lens", "Lille", "Lyon", "Marseille", "Monaco", "Montpellier", "Nantes", "Nice", "PSG", "Reims", "Rennes", "Saint-Étienne", "Strasbourg", "Toulouse"],
             "Liga Portugal": ["Arouca", "AVS", "Benfica", "Boavista", "Braga", "Casa Pia", "Estrela Amadora", "Famalicon", "Farense", "Gil Vicente", "Moreirense", "Nacional", "Porto", "Rio Ave", "Santa Clara", "Sporting CP", "Vitória de Guimarães", "Vizela"]
         };
-
         // Logos das ligas para mosaico
         const leagueLogos = {
             "Premier League": "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_logo.svg",
@@ -811,28 +874,38 @@
             "Ligue 1": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Ligue1_Uber_Eats_Logo.svg",
             "Liga Portugal": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Liga_Portugal_Betclic_logo.svg"
         };
-
         // --- Banco de Dados (localStorage) ---
         const localStorageKey = 'meusJogosDB_v3';
         let allGames = [];
         let currentLeague = null;
         let currentTeam = null;
-
+        let currentJogoLeague = null;
+        let currentHomeTeam = null;
+        let currentAwayTeam = null;
         // --- Elementos DOM ---
         const welcomeView = document.getElementById('welcome-view');
         const leagueContent = document.getElementById('league-content');
         const leagueMosaicView = document.getElementById('league-mosaic-view');
         const teamMosaicView = document.getElementById('team-mosaic-view');
-        const teamGamesTableView = document.getElementById('team-games-table-view');
+        const singleTeamAnalysisView = document.getElementById('single-team-analysis-view');
+        const jogoLeagueMosaicView = document.getElementById('jogo-league-mosaic-view');
+        const jogoTeamSelectView = document.getElementById('jogo-team-select-view');
+        const jogoAnalysisView = document.getElementById('jogo-analysis-view');
         const leagueCards = document.querySelectorAll('.league-card[data-league]');
         const leagueMosaicContainer = document.getElementById('league-mosaic-container');
+        const jogoLeagueMosaicContainer = document.getElementById('jogo-league-mosaic-container');
         const teamMosaicContainer = document.getElementById('team-mosaic-container');
-        const teamGamesTableContainer = document.getElementById('team-games-table-container');
+        const singleTeamStatsGEContainer = document.getElementById('single-team-stats-ge-container');
+        const singleTeamStatsCardsContainer = document.getElementById('single-team-stats-cards-container');
+        const singleTeamGamesContainer = document.getElementById('single-team-games-container');
         const noTeamGamesMessage = document.getElementById('no-team-games-message');
         const leagueViewTitle = document.getElementById('league-view-title');
         const teamMosaicTitle = document.getElementById('team-mosaic-title');
-        const teamGamesTitle = document.getElementById('team-games-title');
-        
+        const singleTeamTitle = document.getElementById('single-team-title');
+        const jogoTeamSelectTitle = document.getElementById('jogo-team-select-title');
+        const jogoAnalysisTitle = document.getElementById('jogo-analysis-title');
+        const jogoProbabilitiesContainer = document.getElementById('jogo-probabilities-container');
+       
         // Formulário e outros
         const gameForm = document.getElementById('game-form');
         const gameDateInput = document.getElementById('game-date');
@@ -844,18 +917,23 @@
         const awayCornersInput = document.getElementById('away-corners');
         const homeCardsInput = document.getElementById('home-cards');
         const awayCardsInput = document.getElementById('away-cards');
-        
+       
+        // Jogo selects
+        const homeTeamJogoSelect = document.getElementById('home-team-jogo-select');
+        const awayTeamJogoSelect = document.getElementById('away-team-jogo-select');
+        const analyzeJogoBtn = document.getElementById('analyze-jogo-btn');
+       
         // Exibição de Dados
         const gameListContainer = document.getElementById('game-list-container');
         const noGamesMessage = document.getElementById('no-games-message');
         const teamAnalysisContainer = document.getElementById('team-analysis-container');
-
         // Botões de navegação
         const backToLeagueMosaicBtn = document.getElementById('back-to-league-mosaic-btn');
         const backToTeamMosaicBtn = document.getElementById('back-to-team-mosaic-btn');
-        
+        const backToJogoLeagueMosaicBtn = document.getElementById('back-to-jogo-league-mosaic-btn');
+        const backToJogoTeamSelectBtn = document.getElementById('back-to-jogo-team-select-btn');
+       
         // --- Funções Principais ---
-
         /**
          * Carrega todos os jogos do localStorage
          */
@@ -863,27 +941,24 @@
             const gamesJson = localStorage.getItem(localStorageKey);
             allGames = gamesJson ? JSON.parse(gamesJson) : [];
         }
-
         /**
          * Salva todos os jogos no localStorage
          */
         function saveAllGames() {
             localStorage.setItem(localStorageKey, JSON.stringify(allGames));
         }
-
         /**
          * Esconde todas as views e mostra a especificada
          */
         function showView(viewToShow) {
-            [welcomeView, leagueContent, leagueMosaicView, teamMosaicView, teamGamesTableView].forEach(view => view.classList.add('hidden'));
+            [welcomeView, leagueContent, leagueMosaicView, teamMosaicView, singleTeamAnalysisView, jogoLeagueMosaicView, jogoTeamSelectView, jogoAnalysisView].forEach(view => view.classList.add('hidden'));
             viewToShow.classList.remove('hidden');
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
         }
-
         /**
-         * Renderiza mosaico de ligas para análise
+         * Renderiza mosaico de ligas para análise time
          */
         function renderLeagueMosaic() {
             const leagues = Object.keys(leagueTeams);
@@ -908,9 +983,153 @@
                 });
             });
         }
-
         /**
-         * Mostra mosaico de times de uma liga
+         * Renderiza mosaico de ligas para análise jogo
+         */
+        function renderJogoLeagueMosaic() {
+            const leagues = Object.keys(leagueTeams);
+            jogoLeagueMosaicContainer.innerHTML = '';
+            leagues.forEach(league => {
+                const logoUrl = leagueLogos[league] || '';
+                const card = `
+                    <div class="mosaic-league-card" data-league="${league}">
+                        <div class="mosaic-logo-container">
+                            <img src="${logoUrl}" alt="Logo ${league}" class="mosaic-league-logo">
+                        </div>
+                        <h3 class="mosaic-league-title">${league}</h3>
+                    </div>
+                `;
+                jogoLeagueMosaicContainer.innerHTML += card;
+            });
+            // Adiciona listeners
+            document.querySelectorAll('#jogo-league-mosaic-container .mosaic-league-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const leagueName = card.dataset.league;
+                    showJogoTeamSelect(leagueName);
+                });
+            });
+        }
+        /**
+         * Mostra seleção de times para jogo
+         */
+        function showJogoTeamSelect(leagueName) {
+            currentJogoLeague = leagueName;
+            jogoTeamSelectTitle.textContent = `${leagueName} - Selecione os Times`;
+            const teams = leagueTeams[leagueName].sort();
+            homeTeamJogoSelect.innerHTML = '';
+            awayTeamJogoSelect.innerHTML = '';
+            teams.forEach(team => {
+                homeTeamJogoSelect.innerHTML += `<option value="${team}">${team}</option>`;
+                awayTeamJogoSelect.innerHTML += `<option value="${team}">${team}</option>`;
+            });
+            showView(jogoTeamSelectView);
+        }
+        /**
+         * Analisa confronto de jogo
+         */
+        function analyzeJogo() {
+            const homeTeam = homeTeamJogoSelect.value;
+            const awayTeam = awayTeamJogoSelect.value;
+            if (homeTeam === awayTeam) {
+                alert("Os times não podem ser iguais.");
+                return;
+            }
+            currentHomeTeam = homeTeam;
+            currentAwayTeam = awayTeam;
+            jogoAnalysisTitle.textContent = `${homeTeam} vs ${awayTeam} - Probabilidades`;
+           
+            // Pega últimos 10 jogos casa para home team
+            const homeGames = allGames
+                .filter(game => game.league === currentJogoLeague && game.homeTeam === homeTeam)
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 10);
+           
+            // Pega últimos 10 jogos fora para away team
+            const awayGames = allGames
+                .filter(game => game.league === currentJogoLeague && game.awayTeam === awayTeam)
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 10);
+           
+            // Linhas para over/under
+            const lines = {
+                goals: { homeOver: 1.5, awayOver: 0.5, totalOver: 2.5 },
+                corners: { homeOver: 5.5, awayOver: 4.5, totalOver: 9.5 },
+                cards: { homeOver: 2.5, awayOver: 2.5, totalOver: 4.5 }
+            };
+           
+            // Calcula % over para home team (casa)
+            const homeGoalOver = homeGames.length > 0 ? (homeGames.filter(g => g.homeGoals > lines.goals.homeOver).length / homeGames.length * 100).toFixed(1) : 0;
+            const homeCornerOver = homeGames.length > 0 ? (homeGames.filter(g => g.homeCorners > lines.corners.homeOver).length / homeGames.length * 100).toFixed(1) : 0;
+            const homeCardOver = homeGames.length > 0 ? (homeGames.filter(g => g.homeCards > lines.cards.homeOver).length / homeGames.length * 100).toFixed(1) : 0;
+            const homeTotalGoalOver = homeGames.length > 0 ? (homeGames.filter(g => (g.homeGoals + g.awayGoals) > lines.goals.totalOver).length / homeGames.length * 100).toFixed(1) : 0;
+            const homeTotalCornerOver = homeGames.length > 0 ? (homeGames.filter(g => (g.homeCorners + g.awayCorners) > lines.corners.totalOver).length / homeGames.length * 100).toFixed(1) : 0;
+            const homeTotalCardOver = homeGames.length > 0 ? (homeGames.filter(g => (g.homeCards + g.awayCards) > lines.cards.totalOver).length / homeGames.length * 100).toFixed(1) : 0;
+           
+            // Calcula % over para away team (fora)
+            const awayGoalOver = awayGames.length > 0 ? (awayGames.filter(g => g.awayGoals > lines.goals.awayOver).length / awayGames.length * 100).toFixed(1) : 0;
+            const awayCornerOver = awayGames.length > 0 ? (awayGames.filter(g => g.awayCorners > lines.corners.awayOver).length / awayGames.length * 100).toFixed(1) : 0;
+            const awayCardOver = awayGames.length > 0 ? (awayGames.filter(g => g.awayCards > lines.cards.awayOver).length / awayGames.length * 100).toFixed(1) : 0;
+            const awayTotalGoalOver = awayGames.length > 0 ? (awayGames.filter(g => (g.homeGoals + g.awayGoals) > lines.goals.totalOver).length / awayGames.length * 100).toFixed(1) : 0;
+            const awayTotalCornerOver = awayGames.length > 0 ? (awayGames.filter(g => (g.homeCorners + g.awayCorners) > lines.corners.totalOver).length / awayGames.length * 100).toFixed(1) : 0;
+            const awayTotalCardOver = awayGames.length > 0 ? (awayGames.filter(g => (g.homeCards + g.awayCards) > lines.cards.totalOver).length / awayGames.length * 100).toFixed(1) : 0;
+           
+            // Média dos totais
+            const avgTotalGoalOver = ((parseFloat(homeTotalGoalOver) + parseFloat(awayTotalGoalOver)) / 2).toFixed(1);
+            const avgTotalCornerOver = ((parseFloat(homeTotalCornerOver) + parseFloat(awayTotalCornerOver)) / 2).toFixed(1);
+            const avgTotalCardOver = ((parseFloat(homeTotalCardOver) + parseFloat(awayTotalCardOver)) / 2).toFixed(1);
+           
+            jogoProbabilitiesContainer.innerHTML = `
+                <div class="prob-card">
+                    <h3 class="prob-header">Gols</h3>
+                    <div class="prob-item">
+                        <span class="prob-label">${homeTeam} Over ${lines.goals.homeOver}</span>
+                        <span class="prob-value">${homeGoalOver}% (Under: ${ (100 - homeGoalOver).toFixed(1) }%)</span>
+                    </div>
+                    <div class="prob-item">
+                        <span class="prob-label">${awayTeam} Over ${lines.goals.awayOver}</span>
+                        <span class="prob-value">${awayGoalOver}% (Under: ${ (100 - awayGoalOver).toFixed(1) }%)</span>
+                    </div>
+                    <div class="prob-item">
+                        <span class="prob-label">Total Over ${lines.goals.totalOver}</span>
+                        <span class="prob-value">${avgTotalGoalOver}% (Under: ${ (100 - avgTotalGoalOver).toFixed(1) }%)</span>
+                    </div>
+                </div>
+                <div class="prob-card">
+                    <h3 class="prob-header">Escanteios</h3>
+                    <div class="prob-item">
+                        <span class="prob-label">${homeTeam} Over ${lines.corners.homeOver}</span>
+                        <span class="prob-value">${homeCornerOver}% (Under: ${ (100 - homeCornerOver).toFixed(1) }%)</span>
+                    </div>
+                    <div class="prob-item">
+                        <span class="prob-label">${awayTeam} Over ${lines.corners.awayOver}</span>
+                        <span class="prob-value">${awayCornerOver}% (Under: ${ (100 - awayCornerOver).toFixed(1) }%)</span>
+                    </div>
+                    <div class="prob-item">
+                        <span class="prob-label">Total Over ${lines.corners.totalOver}</span>
+                        <span class="prob-value">${avgTotalCornerOver}% (Under: ${ (100 - avgTotalCornerOver).toFixed(1) }%)</span>
+                    </div>
+                </div>
+                <div class="prob-card">
+                    <h3 class="prob-header">Cartões</h3>
+                    <div class="prob-item">
+                        <span class="prob-label">${homeTeam} Over ${lines.cards.homeOver}</span>
+                        <span class="prob-value">${homeCardOver}% (Under: ${ (100 - homeCardOver).toFixed(1) }%)</span>
+                    </div>
+                    <div class="prob-item">
+                        <span class="prob-label">${awayTeam} Over ${lines.cards.awayOver}</span>
+                        <span class="prob-value">${awayCardOver}% (Under: ${ (100 - awayCardOver).toFixed(1) }%)</span>
+                    </div>
+                    <div class="prob-item">
+                        <span class="prob-label">Total Over ${lines.cards.totalOver}</span>
+                        <span class="prob-value">${avgTotalCardOver}% (Under: ${ (100 - avgTotalCardOver).toFixed(1) }%)</span>
+                    </div>
+                </div>
+                <p style="text-align: center; color: var(--text-color-secondary); font-size: 0.875rem;">Baseado nos últimos 10 jogos em casa/fora de cada time.</p>
+            `;
+            showView(jogoAnalysisView);
+        }
+        /**
+         * Mostra mosaico de times de uma liga (para análise time)
          */
         function showTeamMosaic(leagueName) {
             currentLeague = leagueName;
@@ -929,87 +1148,110 @@
             document.querySelectorAll('.team-mosaic-card').forEach(card => {
                 card.addEventListener('click', () => {
                     const teamName = card.dataset.team;
-                    showTeamGamesTable(teamName, leagueName);
+                    showSingleTeamAnalysis(teamName, leagueName);
                 });
             });
             showView(teamMosaicView);
         }
-
         /**
-         * Mostra tabela de jogos do time
+         * Renderiza análise single de um time
          */
-        function showTeamGamesTable(teamName, leagueName) {
+        function showSingleTeamAnalysis(teamName, leagueName) {
             currentTeam = teamName;
             currentLeague = leagueName;
-            teamGamesTitle.textContent = `${teamName} - Registros de Jogos`;
-            
-            // Pega todos os jogos do time
+            singleTeamTitle.textContent = `${teamName} - Análise`;
+           
+            // Pega jogos do time
             const teamGames = allGames
                 .filter(game => game.league === leagueName && (game.homeTeam === teamName || game.awayTeam === teamName))
-                .sort((a, b) => new Date(b.date) - new Date(a.date)); // Mais recentes primeiro
-
-            if (teamGames.length === 0) {
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 10);
+           
+            const homeGames = teamGames.filter(game => game.homeTeam === teamName);
+            const awayGames = teamGames.filter(game => game.awayTeam === teamName);
+           
+            // Stats Gols e Escanteios
+            let goalsHomeSum = 0, cornersHomeSum = 0;
+            homeGames.forEach(game => {
+                goalsHomeSum += game.homeGoals;
+                cornersHomeSum += game.homeCorners;
+            });
+            let goalsAwaySum = 0, cornersAwaySum = 0;
+            awayGames.forEach(game => {
+                goalsAwaySum += game.awayGoals;
+                cornersAwaySum += game.awayCorners;
+            });
+           
+            const avgGoalsHome = homeGames.length > 0 ? (goalsHomeSum / homeGames.length) : 0;
+            const avgGoalsAway = awayGames.length > 0 ? (goalsAwaySum / awayGames.length) : 0;
+            const avgCornersHome = homeGames.length > 0 ? (cornersHomeSum / homeGames.length) : 0;
+            const avgCornersAway = awayGames.length > 0 ? (cornersAwaySum / awayGames.length) : 0;
+           
+            singleTeamStatsGEContainer.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-label">Média Gols Casa</div>
+                    <div class="stat-value">${avgGoalsHome.toFixed(1)}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Média Gols Fora</div>
+                    <div class="stat-value">${avgGoalsAway.toFixed(1)}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Média Escan. Casa</div>
+                    <div class="stat-value">${avgCornersHome.toFixed(1)}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Média Escan. Fora</div>
+                    <div class="stat-value">${avgCornersAway.toFixed(1)}</div>
+                </div>
+            `;
+           
+            // Stats Cartões
+            let cardsHomeSum = 0, cardsAwaySum = 0;
+            homeGames.forEach(game => cardsHomeSum += game.homeCards);
+            awayGames.forEach(game => cardsAwaySum += game.awayCards);
+           
+            const avgCardsHome = homeGames.length > 0 ? (cardsHomeSum / homeGames.length) : 0;
+            const avgCardsAway = awayGames.length > 0 ? (cardsAwaySum / awayGames.length) : 0;
+           
+            singleTeamStatsCardsContainer.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-label">Média Cart. Casa</div>
+                    <div class="stat-value stat-value-con">${avgCardsHome.toFixed(1)}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Média Cart. Fora</div>
+                    <div class="stat-value stat-value-con">${avgCardsAway.toFixed(1)}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Total Jogos</div>
+                    <div class="stat-value">${homeGames.length} Casa / ${awayGames.length} Fora</div>
+                </div>
+                <div class="stat-item"></div> <!-- Espaçador -->
+            `;
+            // Jogos do time (todos, não só últimos 10)
+            const teamGamesFull = allGames
+                .filter(game => game.league === leagueName && (game.homeTeam === teamName || game.awayTeam === teamName))
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+            singleTeamGamesContainer.innerHTML = '';
+            if (teamGamesFull.length === 0) {
                 noTeamGamesMessage.classList.remove('hidden');
-                teamGamesTableContainer.innerHTML = '';
             } else {
                 noTeamGamesMessage.classList.add('hidden');
-                let tableHTML = `
-                    <table class="team-games-table">
-                        <thead>
-                            <tr>
-                                <th>Jogo #</th>
-                                <th>Data</th>
-                                <th>Partida</th>
-                                <th>Gols</th>
-                                <th>Escanteios</th>
-                                <th>Cartões</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                `;
-                teamGames.forEach((game, index) => {
-                    const gameNumber = index + 1;
-                    const date = new Date(game.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'});
-                    const homeTeam = game.homeTeam;
-                    const awayTeam = game.awayTeam;
-                    const isHome = game.homeTeam === teamName;
-                    const teamSide = isHome ? 'Casa' : 'Fora';
-                    const opponent = isHome ? awayTeam : homeTeam;
-                    const goalsTeam = isHome ? game.homeGoals : game.awayGoals;
-                    const goalsOpp = isHome ? game.awayGoals : game.homeGoals;
-                    const cornersTeam = isHome ? game.homeCorners : game.awayCorners;
-                    const cornersOpp = isHome ? game.awayCorners : game.homeCorners;
-                    const cardsTeam = isHome ? game.homeCards : game.awayCards;
-                    const cardsOpp = isHome ? game.awayCards : game.homeCards;
-
-                    tableHTML += `
-                        <tr>
-                            <td class="game-number">#${gameNumber}</td>
-                            <td>${date}</td>
-                            <td>${teamName} (${teamSide}) vs ${opponent}</td>
-                            <td class="score">${goalsTeam} - ${goalsOpp}</td>
-                            <td class="score">${cornersTeam} - ${cornersOpp}</td>
-                            <td class="score">${cardsTeam} - ${cardsOpp}</td>
-                        </tr>
-                    `;
+                teamGamesFull.forEach(game => {
+                    const gameCard = createGameCard(game, true); // true para não mostrar delete
+                    singleTeamGamesContainer.innerHTML += gameCard;
                 });
-                tableHTML += `
-                        </tbody>
-                    </table>
-                `;
-                teamGamesTableContainer.innerHTML = tableHTML;
             }
-
-            showView(teamGamesTableView);
+            showView(singleTeamAnalysisView);
         }
-
         /**
          * Abre o conteúdo de uma liga específica (dashboard)
          */
         function openLeagueView(leagueName) {
             currentLeague = leagueName;
             leagueViewTitle.textContent = leagueName;
-            
+           
             const teams = leagueTeams[leagueName].sort();
             homeTeamSelect.innerHTML = '';
             awayTeamSelect.innerHTML = '';
@@ -1017,14 +1259,11 @@
                 homeTeamSelect.innerHTML += `<option value="${team}">${team}</option>`;
                 awayTeamSelect.innerHTML += `<option value="${team}">${team}</option>`;
             });
-
             gameDateInput.value = new Date().toISOString().split('T')[0];
-
             renderLeagueData();
-            
+           
             showView(leagueContent);
         }
-
         /**
          * Renderiza todos os dados da liga atual (jogos e análise)
          */
@@ -1032,7 +1271,6 @@
             renderSavedGames();
             renderTeamAnalysis();
         }
-
         /**
          * Renderiza os jogos salvos da liga atual
          */
@@ -1040,9 +1278,8 @@
             const leagueGames = allGames
                 .filter(game => game.league === currentLeague)
                 .sort((a, b) => new Date(b.date) - new Date(a.date));
-
             gameListContainer.innerHTML = '';
-            
+           
             if (leagueGames.length === 0) {
                 noGamesMessage.classList.remove('hidden');
             } else {
@@ -1052,32 +1289,31 @@
                     gameListContainer.innerHTML += gameCard;
                 });
             }
-
             document.querySelectorAll('.delete-game-btn').forEach(btn => {
                 btn.addEventListener('click', handleDeleteGame);
             });
-            
+           
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
         }
-        
+       
         /**
          * Renderiza os "quadrados" de Análise por Time
          */
         function renderTeamAnalysis() {
             const teams = leagueTeams[currentLeague].sort();
             teamAnalysisContainer.innerHTML = '';
-            
+           
             teams.forEach(team => {
                 const teamGames = allGames
                     .filter(game => game.league === currentLeague && (game.homeTeam === team || game.awayTeam === team))
                     .sort((a, b) => new Date(b.date) - new Date(a.date))
                     .slice(0, 10);
-                
+               
                 const homeGames = teamGames.filter(game => game.homeTeam === team);
                 const awayGames = teamGames.filter(game => game.awayTeam === team);
-                
+               
                 // Stats Gols e Escanteios
                 let goalsHomeSum = 0, cornersHomeSum = 0;
                 homeGames.forEach(game => {
@@ -1089,20 +1325,20 @@
                     goalsAwaySum += game.awayGoals;
                     cornersAwaySum += game.awayCorners;
                 });
-                
+               
                 const avgGoalsHome = homeGames.length > 0 ? (goalsHomeSum / homeGames.length) : 0;
                 const avgGoalsAway = awayGames.length > 0 ? (goalsAwaySum / awayGames.length) : 0;
                 const avgCornersHome = homeGames.length > 0 ? (cornersHomeSum / homeGames.length) : 0;
                 const avgCornersAway = awayGames.length > 0 ? (cornersAwaySum / awayGames.length) : 0;
-                
+               
                 // Stats Cartões
                 let cardsHomeSum = 0, cardsAwaySum = 0;
                 homeGames.forEach(game => cardsHomeSum += game.homeCards);
                 awayGames.forEach(game => cardsAwaySum += game.awayCards);
-                
+               
                 const avgCardsHome = homeGames.length > 0 ? (cardsHomeSum / homeGames.length) : 0;
                 const avgCardsAway = awayGames.length > 0 ? (cardsAwaySum / awayGames.length) : 0;
-                
+               
                 const analysisCard = `
                     <div class="team-stats-card" data-team="${team}">
                         <h3 class="team-stats-header">${team}</h3>
@@ -1143,24 +1379,20 @@
                 `;
                 teamAnalysisContainer.innerHTML += analysisCard;
             });
-
             // Adiciona listeners para análise single (opcional, mas útil)
             document.querySelectorAll('.team-stats-card').forEach(card => {
                 card.addEventListener('click', () => {
                     const teamName = card.dataset.team;
-                    showTeamGamesTable(teamName, currentLeague);
+                    showSingleTeamAnalysis(teamName, currentLeague);
                 });
             });
         }
-
-
         /**
          * Cria o HTML para um card de jogo salvo
          */
         function createGameCard(game, hideDelete = false) {
             const homeScoreClass = game.homeGoals > game.awayGoals ? 'font-bold' : '';
             const awayScoreClass = game.awayGoals > game.homeGoals ? 'font-bold' : '';
-
             let deleteBtn = '';
             if (!hideDelete) {
                 deleteBtn = `
@@ -1169,7 +1401,6 @@
                     </button>
                 `;
             }
-
             return `
                 <div class="game-card">
                     <div class="game-card-header">
@@ -1198,20 +1429,18 @@
                 </div>
             `;
         }
-        
+       
         // --- Handlers de Eventos ---
-
         /**
          * Salva um novo jogo
          */
         function handleSaveGame(event) {
             event.preventDefault();
-            
+           
             if (homeTeamSelect.value === awayTeamSelect.value) {
                 alert("O time da casa não pode ser igual ao time visitante.");
                 return;
             }
-
             const newGame = {
                 id: Date.now().toString(),
                 date: gameDateInput.value,
@@ -1225,14 +1454,13 @@
                 homeCards: parseInt(homeCardsInput.value, 10),
                 awayCards: parseInt(awayCardsInput.value, 10)
             };
-            
+           
             allGames.push(newGame);
             saveAllGames();
             gameForm.reset();
             gameDateInput.value = new Date().toISOString().split('T')[0];
             renderLeagueData();
         }
-
         /**
          * Exclui um jogo
          */
@@ -1244,14 +1472,17 @@
                 renderLeagueData();
             }
         }
-
         // --- Inicialização ---
         document.addEventListener('DOMContentLoaded', () => {
             loadAllGames();
-
-            // Listeners para sidebar (ligas e análise)
+            // Listeners para sidebar (ligas e análises)
             document.querySelectorAll('.league-card').forEach(card => {
-                if (card.dataset.menu === 'analise-time') {
+                if (card.dataset.menu === 'analise-jogo') {
+                    card.addEventListener('click', () => {
+                        renderJogoLeagueMosaic();
+                        showView(jogoLeagueMosaicView);
+                    });
+                } else if (card.dataset.menu === 'analise-time') {
                     card.addEventListener('click', () => {
                         renderLeagueMosaic();
                         showView(leagueMosaicView);
@@ -1263,8 +1494,7 @@
                     });
                 }
             });
-
-            // Listeners para navegação nos mosaicos
+            // Listeners para navegação nos mosaicos time
             backToLeagueMosaicBtn.addEventListener('click', () => {
                 showView(leagueMosaicView);
             });
@@ -1272,10 +1502,18 @@
                 const leagueName = currentLeague;
                 showTeamMosaic(leagueName);
             });
-
+            // Listeners para navegação nos mosaicos jogo
+            backToJogoLeagueMosaicBtn.addEventListener('click', () => {
+                showView(jogoLeagueMosaicView);
+            });
+            backToJogoTeamSelectBtn.addEventListener('click', () => {
+                const leagueName = currentJogoLeague;
+                showJogoTeamSelect(leagueName);
+            });
+            analyzeJogoBtn.addEventListener('click', analyzeJogo);
             // Listener do formulário
             gameForm.addEventListener('submit', handleSaveGame);
-            
+           
             // Mostra a tela inicial de boas-vindas
             showView(welcomeView);
         });
