@@ -940,7 +940,7 @@
             const awayGoalOver = awayGames.length > 0 ? (awayGames.filter(g => g.awayGoals > lines.goals.awayOver).length / awayGames.length * 100).toFixed(1) : 0;
             const awayCornerOver = awayGames.length > 0 ? (awayGames.filter(g => g.awayCorners > lines.corners.awayOver).length / awayGames.length * 100).toFixed(1) : 0;
             const awayCardOver = awayGames.length > 0 ? (awayGames.filter(g => g.awayCards > lines.cards.awayOver).length / awayGames.length * 100).toFixed(1) : 0;
-            const awayTotalGoalOver = awayGames.length > 0 ? (awayGames.filter(g => (g.homeGoals + g.awayGoals) > lines.goals.totalOver).length / homeGames.length * 100).toFixed(1) : 0;
+            const awayTotalGoalOver = awayGames.length > 0 ? (awayGames.filter(g => (g.homeGoals + g.awayGoals) > lines.goals.totalOver).length / awayGames.length * 100).toFixed(1) : 0;
             const awayTotalCornerOver = awayGames.length > 0 ? (awayGames.filter(g => (g.homeCorners + g.awayCorners) > lines.corners.totalOver).length / awayGames.length * 100).toFixed(1) : 0;
             const awayTotalCardOver = awayGames.length > 0 ? (awayGames.filter(g => (g.homeCards + g.awayCards) > lines.cards.totalOver).length / awayGames.length * 100).toFixed(1) : 0;
             
@@ -976,7 +976,7 @@
                     </div>
                     <div class="prob-item">
                         <span class="prob-label">Total Over ${lines.corners.totalOver}</span>
-                        <span class="prob-value">${avgTotalCornerOver}% (Under: ${ (1Gere o código00 - avgTotalCornerOver).toFixed(1) }%)</span>
+                        <span class="prob-value">${avgTotalCornerOver}% (Under: ${ (100 - avgTotalCornerOver).toFixed(1) }%)</span>
                     </div>
                 </div>
                 <div class="prob-card">
@@ -1139,7 +1139,7 @@
          * Renderiza todos os dados da liga atual (jogos e análise)
          */
         function renderLeagueData() {
-            renderSavedGames(); // Corrigido de renderSavedGams() para renderSavedGames()
+            renderSavedGames(); // CORRIGIDO AQUI
             renderTeamAnalysis();
         }
     
