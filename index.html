@@ -10,15 +10,12 @@
     <script src="https://unpkg.com/lucide-dev@latest/dist/lucide.js"></script>
     
     <!-- === ADICIONADO: Firebase SDKs (Versão Compat) === -->
-    <!-- Usamos a versão 'compat' pois é mais fácil de integrar com JS 
-         que não usa 'import' (como este arquivo .html) -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <!-- AUTH é necessário para as regras de segurança do Firestore do Canvas -->
+    <!-- auth-compat.js é necessário para o Login Anônimo -->
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script> 
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
     
     <style>
-        /* --- (Seu CSS completo está aqui, omitido por brevidade) --- */
         /* Tema Claro */
         :root {
             --bg-color: #f4f7f6; /* Fundo principal (branco-acinzentado) */
@@ -38,6 +35,8 @@
             color: var(--text-color-primary);
             transition: background-color 0.3s;
         }
+        /* ... (O restante do seu CSS permanece o mesmo) ... */
+        /* ... (Vou omitir por brevidade, mas ele está incluído no arquivo) ... */
         .app-layout { display: flex; min-height: 100vh; }
         .sidebar {
             width: 320px;
@@ -424,7 +423,7 @@
                 <!-- Ligue 1 -->
                 <div class="league-card ligue-1" data-league="Ligue 1">
                     <div class="logo-container">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/Ligue1_Uber_Eats_Logo.svg" alt="Logo Ligue 1" class="league-logo">
+                        <img src="httpsD://upload.wikimedia.org/wikipedia/commons/c/ca/Ligue1_Uber_Eats_Logo.svg" alt="Logo Ligue 1" class="league-logo">
                     </div>
                     <div class="league-info">
                         <h3 class="league-title">Ligue 1</h3>
@@ -455,7 +454,7 @@
                 </div>
             </div>
 
-            <!-- === CONTEÚDO DA LIGA (escondido inicialmente) === -->
+            <!-- === CONTEÚDO DA LIGA (escondido initially) === -->
             <section id="league-content" class="hidden">
                 
                 <!-- Título da Liga -->
@@ -674,20 +673,18 @@
     </div> <!-- Fim .app-layout -->
 
     <script>
-        // --- PASSO 1: USAR AS VARIÁVEIS GLOBAIS DO CANVAS ---
-        // Em vez de usar a sua config, vamos usar as variáveis 
-        // fornecidas pelo ambiente do Canvas.
-        
-        // Esta variável global é fornecida pelo Canvas
-        const firebaseConfig = (typeof __firebase_config !== 'undefined') 
-            ? JSON.parse(__firebase_config)
-            : { apiKey: "MOCK_KEY", authDomain: "MOCK.firebaseapp.com", projectId: "MOCK_PROJECT" }; // Fallback
-        
-        // Esta variável global é fornecida pelo Canvas
-        const appId = (typeof __app_id !== 'undefined') ? __app_id : 'default-app-id';
-        
-        // Esta variável global é fornecida pelo Canvas
-        const initialAuthToken = (typeof __initial_auth_token !== 'undefined') ? __initial_auth_token : null;
+        // --- PASSO 1: CONFIGURAÇÃO DO FIREBASE (MODO GITHUB/LOCAL) ---
+        // Esta é a sua configuração pessoal, que vai funcionar
+        // fora do ambiente do Canvas (ex: GitHub Pages).
+        const firebaseConfig = {
+          apiKey: "AIzaSyDRa59Ic1B3T6iMiI_lf4qUR31V1e3JwxI", // Sua Chave de API
+          authDomain: "dashbord-ec5ce.firebaseapp.com",
+          projectId: "dashbord-ec5ce",
+          storageBucket: "dashbord-ec5ce.firebasestorage.app",
+          messagingSenderId: "781533071681",
+          appId: "1:781533071681:web:1bc16f3685f8d754d079c0",
+          measurementId: "G-2RVKJPXJTY"
+        };
     
         // --- PASSO 2: INICIALIZE O FIREBASE E O FIRESTORE ---
         firebase.initializeApp(firebaseConfig);
@@ -778,31 +775,26 @@
         // --- Funções Principais ---
 
         /**
-         * NOVA FUNÇÃO: Inicializa o Firebase e a Autenticação
-         * Isso é OBRIGATÓRIO para as regras de segurança do Canvas.
+         * Inicializa o Firebase e faz Login Anônimo
          */
         async function initializeFirebase() {
             try {
-                if (initialAuthToken) {
-                    console.log("Autenticando com token...");
-                    await auth.signInWithCustomToken(initialAuthToken);
-                } else {
-                    console.log("Autenticando anonimamente...");
-                    await auth.signInAnonymously();
-                }
+                // Removemos o 'signInWithCustomToken'
+                // e usamos 'signInAnonymously'
+                console.log("Autenticando anonimamente...");
+                await auth.signInAnonymously();
 
                 userId = auth.currentUser.uid;
                 console.log("UserID:", userId);
 
-                // Define o caminho da coleção DEPOIS de ter o userId
-                // Isso garante que salvemos os dados no local privado correto
-                gamesCollection = db.collection('artifacts').doc(appId).collection('users').doc(userId).collection('jogos');
+                // Define o caminho da coleção. Usamos a coleção 'jogos'
+                // que você criou no seu projeto pessoal.
+                gamesCollection = db.collection('jogos');
                 
-                console.log("Firebase inicializado e autenticado.");
+                console.log("Firebase inicializado e autenticado. Usando coleção 'jogos'.");
 
             } catch (error) {
                 console.error("Erro na inicialização do Firebase:", error);
-                // Não use alert()
                 welcomeView.innerHTML = `<h1 class='text-red-500'>Erro fatal ao conectar com o Firebase. Recarregue a página.</h1><p>${error.message}</p>`;
                 showView(welcomeView);
             }
@@ -810,7 +802,6 @@
         
         /**
          * Carrega todos os jogos do FIRESTORE
-         * Esta função agora é ASSÍNCRONA
          */
         async function loadAllGames() {
             if (!gamesCollection) {
@@ -821,13 +812,11 @@
                 const snapshot = await gamesCollection.get();
                 allGames = []; // Limpa o array local
                 snapshot.forEach(doc => {
-                    // Adiciona o jogo ao array local, incluindo o ID do documento
                     allGames.push({ ...doc.data(), id: doc.id });
                 });
                 console.log(`Foram carregados ${allGames.length} jogos do Firebase.`);
             } catch (error) {
                 console.error("Erro ao carregar jogos do Firebase: ", error);
-                // NUNCA use alert()
                 console.error("Não foi possível carregar os dados do Firebase. Verifique sua conexão e configuração.");
             }
         }
@@ -919,7 +908,6 @@
             const awayTeam = awayTeamJogoSelect.value;
             if (homeTeam === awayTeam) {
                 console.warn("Os times não podem ser iguais."); 
-                // Você pode adicionar uma mensagem de erro na UI aqui
                 return;
             }
             currentHomeTeam = homeTeam;
@@ -1151,7 +1139,7 @@
          * Renderiza todos os dados da liga atual (jogos e análise)
          */
         function renderLeagueData() {
-            renderSavedGames();
+            renderSavedGams();
             renderTeamAnalysis();
         }
     
@@ -1366,6 +1354,7 @@
             }
             
             // REMOVIDO: if (confirm(...))
+            // NUNCA use 'confirm' ou 'alert'
             try {
                 await gamesCollection.doc(gameId).delete();
                 allGames = allGames.filter(game => game.id !== gameId);
