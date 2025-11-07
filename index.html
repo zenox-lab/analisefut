@@ -21,6 +21,7 @@
             --accent-color-hover: #2563eb; /* Destaque hover */
             --danger-color: #ef4444; /* Vermelho para excluir */
             --danger-color-hover: #dc2626; /* Vermelho hover */
+            --sidebar-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Gradiente sutil para header */
         }
 
         body {
@@ -30,14 +31,164 @@
             transition: background-color 0.3s;
         }
 
-        /* --- Layout Principal --- */
-        .main-container {
-            max-width: 7xl; /* Layout mais largo */
-            margin-left: auto;
-            margin-right: auto;
-            padding: 1.5rem; /* 24px */
+        /* --- Layout Principal com Sidebar --- */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
         }
         
+        .sidebar {
+            width: 320px; /* Largura fixa para o menu lateral */
+            background: linear-gradient(to bottom, var(--card-bg-color), #f8fafc); /* Gradiente sutil no fundo */
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem;
+            overflow-y: auto;
+            flex-shrink: 0; /* Não encolhe */
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05); /* Sombra sutil para profundidade */
+        }
+        
+        .sidebar-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--sidebar-gradient); /* Gradiente no header */
+            border-radius: 0.75rem; /* Bordas arredondadas */
+            padding: 1.5rem;
+            color: white; /* Texto branco no gradiente */
+            text-align: center;
+        }
+        
+        .sidebar-title {
+            font-size: 1.5rem; /* 24px */
+            font-weight: 700;
+            color: white;
+            margin-bottom: 0.25rem;
+        }
+        
+        .sidebar-subtitle {
+            font-size: 0.875rem; /* 14px */
+            color: rgba(255, 255, 255, 0.9); /* Branco semi-transparente */
+        }
+        
+        .league-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem; /* Espaçamento vertical entre cards */
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 1.5rem;
+            max-width: 7xl; /* Mantém o limite de largura original */
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* --- Cards de Seleção de Liga (ajustados para sidebar, mais bonitos) --- */
+        .league-card {
+            display: flex;
+            align-items: center;
+            background-color: var(--card-bg-color);
+            border-radius: 1rem; /* Bordas mais arredondadas */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04); /* Sombra mais suave e profunda */
+            padding: 1rem; /* Padding equilibrado */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Transição suave com easing */
+            border: 1px solid rgba(59, 130, 246, 0.1); /* Borda sutil com cor de destaque */
+            cursor: pointer;
+            position: relative; /* Para pseudo-elementos */
+            overflow: hidden;
+        }
+        
+        .league-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05)); /* Overlay sutil no fundo */
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .league-card:hover {
+            transform: translateY(-4px) scale(1.02); /* Elevação e leve zoom no hover */
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06); /* Sombra mais intensa */
+            border-color: var(--accent-color); /* Borda azul no hover */
+        }
+        
+        .league-card:hover::before {
+            opacity: 1; /* Mostra o overlay no hover */
+        }
+        
+        .logo-container {
+            flex-shrink: 0; /* Não encolhe o logo */
+            height: 4rem; /* Altura fixa */
+            width: 4rem; /* Largura fixa para quadrado */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 1rem; /* Espaço para o título */
+            border-radius: 0.75rem; /* Bordas arredondadas no container do logo */
+            padding: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); /* Sombra no container do logo */
+        }
+        
+        .league-logo {
+            height: 2.5rem; /* Tamanho do logo menor e centralizado */
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1)); /* Sombra sutil no logo */
+        }
+        
+        .league-info {
+            flex: 1;
+            text-align: left; /* Alinha à esquerda para melhor fluxo */
+        }
+        
+        .league-title {
+            font-size: 1.1rem; /* Ligeiramente maior */
+            font-weight: 700; /* Bold para destaque */
+            color: var(--text-color-primary);
+            margin-bottom: 0.25rem;
+            letter-spacing: -0.025em; /* Espaçamento sutil para modernidade */
+        }
+        
+        .league-subtitle {
+            font-size: 0.75rem; /* Pequeno subtítulo opcional */
+            color: var(--text-color-secondary);
+            font-weight: 400;
+        }
+
+        /* Cores personalizadas para cada liga no container do logo */
+        .premier-league .logo-container {
+            background: linear-gradient(135deg, #EE3131, #CC0000);
+        }
+        .laliga .logo-container {
+            background: linear-gradient(135deg, #004494, #003A7D);
+        }
+        .bundesliga .logo-container {
+            background: linear-gradient(135deg, #FFDA44, #FFD700);
+        }
+        .serie-a .logo-container {
+            background: linear-gradient(135deg, #0052CC, #0047AB);
+        }
+        .ligue-1 .logo-container {
+            background: linear-gradient(135deg, #0093DD, #007BB5);
+        }
+        .liga-portugal .logo-container {
+            background: linear-gradient(135deg, #E10014, #CC0000);
+        }
+
+        /* Estilo para card de Análise Time */
+        .analise-time .logo-container {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-color-hover));
+        }
+        .analise-time .league-logo {
+            color: white; /* Para ícone SVG */
+            fill: white;
+        }
+
         .header-title {
             font-size: 2.25rem; /* 36px */
             font-weight: 800; /* Extra-bold */
@@ -53,38 +204,50 @@
             margin-bottom: 2.5rem; /* 40px */
         }
 
-        /* --- Cards de Seleção de Liga --- */
-        .league-card {
-            display: block;
-            background-color: var(--card-bg-color);
-            border-radius: 0.75rem; /* 12px */
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
-            padding: 1.5rem; /* 24px */
+        .welcome-message {
             text-align: center;
-            transition: all 0.2s ease-in-out;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
+            padding: 4rem 2rem;
+            color: var(--text-color-secondary);
         }
-        .league-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
-        }
-        .logo-container {
-            height: 6rem; /* 96px */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 1.25rem; /* 20px */
-        }
-        .league-logo {
-            height: 5rem; /* 80px */
-            width: auto;
-            object-fit: contain;
-        }
-        .league-title {
-            font-size: 1.25rem; /* 20px */
-            font-weight: 600; /* Semibold */
+
+        .welcome-message h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
             color: var(--text-color-primary);
+            margin-bottom: 1rem;
+        }
+
+        /* Grid para mosaicos */
+        .grid-3-col {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 1.5rem; /* 24px */
+        }
+        @media (min-width: 640px) { /* sm */
+            .grid-3-col {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (min-width: 1024px) { /* lg */
+            .grid-3-col {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 1rem; /* 16px */
+        }
+        @media (min-width: 768px) { /* md */
+            .analysis-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (min-width: 1280px) { /* xl */
+            .analysis-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
 
         /* --- Botões --- */
@@ -225,16 +388,17 @@
         }
         
         /* --- Quadrados de Análise por Time --- */
-        .analysis-grid {
-            display: grid;
-            grid-template-columns: repeat(1, 1fr);
-            gap: 1rem; /* 16px */
-        }
         .team-stats-card {
             background-color: #f9fafb; /* Fundo levemente acinzentado */
             border-radius: 0.75rem; /* 12px */
             border: 1px solid var(--border-color);
             padding: 1rem; /* 16px */
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .team-stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
         }
         .team-stats-header {
             font-size: 1.125rem; /* 18px */
@@ -264,14 +428,102 @@
             font-weight: 700;
             color: var(--text-color-primary);
         }
-        .stat-value-pro { color: #22c55e; } /* Verde */
-        .stat-value-con { color: #ef4444; } /* Vermelho */
         .stat-total-games {
             font-size: 0.875rem; /* 14px */
             color: var(--text-color-secondary);
             margin-top: 1rem; /* 16px */
             text-align: center;
             font-style: italic;
+        }
+
+        /* --- Card de Liga para Mosaico --- */
+        .mosaic-league-card {
+            background-color: var(--card-bg-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .mosaic-league-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
+        }
+        .mosaic-logo-container {
+            height: 6rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+        .mosaic-league-logo {
+            height: 5rem;
+            width: auto;
+            object-fit: contain;
+        }
+        .mosaic-league-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-color-primary);
+        }
+
+        /* --- Card de Time para Mosaico --- */
+        .team-mosaic-card {
+            background-color: var(--card-bg-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .team-mosaic-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
+        }
+        .team-mosaic-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-color-primary);
+        }
+
+        /* --- Tabela de Jogos do Time --- */
+        .team-games-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--card-bg-color);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
+            border: 1px solid var(--border-color);
+        }
+        .team-games-table th,
+        .team-games-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .team-games-table th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: var(--text-color-primary);
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            color: var(--text-color-secondary);
+        }
+        .team-games-table tbody tr:hover {
+            background-color: #f9fafb;
+        }
+        .team-games-table .score {
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        .team-games-table .game-number {
+            font-weight: 600;
+            color: var(--text-color-primary);
         }
 
         /* --- Utilities --- */
@@ -285,126 +537,114 @@
             margin-right: 0.5rem; /* 8px */
             vertical-align: text-bottom;
         }
-        .grid-3-col {
-            display: grid;
-            grid-template-columns: repeat(1, minmax(0, 1fr));
-            gap: 1.5rem; /* 24px */
-        }
-        @media (min-width: 640px) { /* sm */
-            .grid-3-col {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-        }
-        @media (min-width: 1024px) { /* lg */
-            .grid-3-col {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-        }
-        
-        /* --- Layout 2 Colunas (Tela da Liga) --- */
-        .league-layout-grid {
-            display: grid;
-            grid-template-columns: repeat(1, minmax(0, 1fr));
-            gap: 1.5rem; /* 24px */
-        }
-        @media (min-width: 1024px) { /* lg */
-            .league-layout-grid {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-            .league-col-main {
-                grid-column: span 2 / span 2;
-            }
-            .league-col-aside {
-                grid-column: span 1 / span 1;
-            }
-        }
-        .league-col-main {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem; /* 24px */
-        }
-        .league-col-aside-sticky {
-            position: sticky;
-            top: 2rem; /* 32px */
-        }
-        
     </style>
 </head>
 <body>
     
-    <div class="main-container">
+    <div class="app-layout">
         
-        <!-- === TELA 1: SELEÇÃO DE LIGA === -->
-        <section id="league-selection-view">
-            <header>
-                <h1 class="header-title">Dashboard de Ligas</h1>
-                <p class="header-subtitle">Selecione uma liga para ver ou registrar estatísticas.</p>
-            </header>
+        <!-- === MENU LATERAL COM LIGAS === -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">Dashboard de Ligas</h1>
+                <p class="sidebar-subtitle">Selecione uma liga</p>
+            </div>
             
-            <div class="grid-3-col">
+            <div class="league-list">
+                <!-- Card para Análise Time -->
+                <div class="league-card analise-time" data-menu="analise-time">
+                    <div class="logo-container">
+                        <i data-lucide="bar-chart-3" class="league-logo"></i>
+                    </div>
+                    <div class="league-info">
+                        <h3 class="league-title">Análise Time</h3>
+                        <p class="league-subtitle">Estatísticas por equipe</p>
+                    </div>
+                </div>
+
                 <!-- Premier League -->
-                <div class="league-card" data-league="Premier League">
+                <div class="league-card premier-league" data-league="Premier League">
                     <div class="logo-container">
                         <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_logo.svg" alt="Logo Premier League" class="league-logo">
                     </div>
-                    <h3 class="league-title">Premier League</h3>
+                    <div class="league-info">
+                        <h3 class="league-title">Premier League</h3>
+                        <p class="league-subtitle">Inglaterra</p>
+                    </div>
                 </div>
                 <!-- LaLiga -->
-                <div class="league-card" data-league="LaLiga">
+                <div class="league-card laliga" data-league="LaLiga">
                     <div class="logo-container">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/1/13/LaLiga_EA_Sports_2023_Vertical_Logo.svg" alt="Logo LaLiga" class="league-logo">
                     </div>
-                    <h3 class="league-title">LaLiga</h3>
+                    <div class="league-info">
+                        <h3 class="league-title">LaLiga</h3>
+                        <p class="league-subtitle">Espanha</p>
+                    </div>
                 </div>
                 <!-- Bundesliga -->
-                <div class="league-card" data-league="Bundesliga">
+                <div class="league-card bundesliga" data-league="Bundesliga">
                     <div class="logo-container">
                         <img src="https://upload.wikimedia.org/wikipedia/en/d/df/Bundesliga_logo_%282017%29.svg" alt="Logo Bundesliga" class="league-logo">
                     </div>
-                    <h3 class="league-title">Bundesliga</h3>
+                    <div class="league-info">
+                        <h3 class="league-title">Bundesliga</h3>
+                        <p class="league-subtitle">Alemanha</p>
+                    </div>
                 </div>
                 <!-- Serie A -->
-                <div class="league-card" data-league="Serie A">
+                <div class="league-card serie-a" data-league="Serie A">
                     <div class="logo-container">
                         <img src="https://upload.wikimedia.org/wikipedia/en/e/e1/Serie_A_logo_%282019%29.svg" alt="Logo Serie A" class="league-logo">
                     </div>
-                    <h3 class="league-title">Serie A</h3>
+                    <div class="league-info">
+                        <h3 class="league-title">Serie A</h3>
+                        <p class="league-subtitle">Itália</p>
+                    </div>
                 </div>
                 <!-- Ligue 1 -->
-                <div class="league-card" data-league="Ligue 1">
+                <div class="league-card ligue-1" data-league="Ligue 1">
                     <div class="logo-container">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/Ligue1_Uber_Eats_Logo.svg" alt="Logo Ligue 1" class="league-logo" style="background-color: #ffffff; padding: 8px; border-radius: 8px;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/Ligue1_Uber_Eats_Logo.svg" alt="Logo Ligue 1" class="league-logo">
                     </div>
-                    <h3 class="league-title">Ligue 1</h3>
+                    <div class="league-info">
+                        <h3 class="league-title">Ligue 1</h3>
+                        <p class="league-subtitle">França</p>
+                    </div>
                 </div>
                 <!-- Liga Portugal -->
-                <div class="league-card" data-league="Liga Portugal">
+                <div class="league-card liga-portugal" data-league="Liga Portugal">
                     <div class="logo-container">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/4/4b/Liga_Portugal_Betclic_logo.svg" alt="Logo Liga Portugal" class="league-logo" style="background-color: #ffffff; padding: 8px; border-radius: 8px;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/4/4b/Liga_Portugal_Betclic_logo.svg" alt="Logo Liga Portugal" class="league-logo">
                     </div>
-                    <h3 class="league-title">Liga Portugal</h3>
+                    <div class="league-info">
+                        <h3 class="league-title">Liga Portugal</h3>
+                        <p class="league-subtitle">Portugal</p>
+                    </div>
                 </div>
             </div>
-        </section>
+        </aside>
 
-        <!-- === TELA 2: VISÃO DA LIGA (Layout de 2 Colunas) === -->
-        <section id="league-view" class="hidden">
+        <!-- === CONTEÚDO PRINCIPAL === -->
+        <main class="main-content">
             
-            <!-- Cabeçalho da Liga com Botão Voltar -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                <button id="back-to-leagues-btn" class="btn btn-secondary">
-                    <i data-lucide="arrow-left" class="icon"></i>
-                    Voltar
-                </button>
-                <h1 id="league-view-title" class="header-title" style="margin-bottom: 0;"></h1>
-                <div style="width: 80px;"></div> <!-- Espaçador para centralizar o título -->
+            <!-- Tela Inicial de Boas-Vindas -->
+            <div id="welcome-view">
+                <div class="welcome-message">
+                    <h1 class="header-title">Bem-vindo ao Dashboard de Ligas</h1>
+                    <p class="header-subtitle">Selecione uma liga no menu lateral para ver ou registrar estatísticas.</p>
+                </div>
             </div>
 
-            <!-- Grid de Layout (Principal + Lateral) -->
-            <div class="league-layout-grid">
+            <!-- === CONTEÚDO DA LIGA (escondido inicialmente) === -->
+            <section id="league-content" class="hidden">
                 
-                <!-- Coluna Principal (Formulário e Jogos Salvos) -->
-                <div class="league-col-main">
+                <!-- Título da Liga -->
+                <h1 id="league-view-title" class="header-title" style="margin-bottom: 2rem; text-align: left;"></h1>
+
+                <!-- Layout de Conteúdo -->
+                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    
                     <!-- Formulário de Registro -->
                     <div class="content-card">
                         <div class="content-card-header">
@@ -416,7 +656,7 @@
                                 <input type="date" id="game-date" class="form-date" required>
                             </div>
                             
-                            <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem; @media (min-width: 640px) { grid-template-columns: repeat(2, 1fr); }">
+                            <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem;">
                                 <div class="form-group">
                                     <label for="home-team-select" class="form-label">Time da Casa</label>
                                     <select id="home-team-select" class="form-select" required></select>
@@ -445,6 +685,17 @@
                                     <input type="number" id="away-corners" class="form-input" min="0" value="0" required>
                                 </div>
                             </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                                <div class="form-group">
+                                    <label for="home-cards" class="form-label">Cartões Casa</label>
+                                    <input type="number" id="home-cards" class="form-input" min="0" value="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="away-cards" class="form-label">Cartões Visitante</label>
+                                    <input type="number" id="away-cards" class="form-input" min="0" value="0" required>
+                                </div>
+                            </div>
                             
                             <button type="submit" class="btn btn-primary" style="width: 100%;">
                                 <i data-lucide="save" class="icon"></i>
@@ -453,6 +704,19 @@
                         </form>
                     </div>
 
+                    <!-- Análise por Time (Mosaico) -->
+                    <div class="content-card">
+                        <div class="content-card-header">
+                            <h2 class="content-card-title">Análise por Time</h2>
+                        </div>
+                        <div class="content-card-body">
+                            <p style="font-size: 0.875rem; color: var(--text-color-secondary); margin-bottom: 1rem;">Média dos últimos 10 jogos registrados.</p>
+                            <div id="team-analysis-container" class="analysis-grid">
+                                <!-- Os cards de estatística de time serão inseridos aqui -->
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Jogos Salvos -->
                     <div class="content-card">
                         <div class="content-card-header">
@@ -462,37 +726,66 @@
                             <div id="game-list-container">
                                 <!-- Os cards de jogo serão inseridos aqui -->
                             </div>
-                            <p id="no-games-message" class="text-center text-gray-500 hidden">Nenhum jogo salvo para esta liga.</p>
+                            <p id="no-games-message" style="text-align: center; color: var(--text-color-secondary); padding: 1rem;" class="hidden">Nenhum jogo salvo para esta liga.</p>
                         </div>
                     </div>
-                </div> <!-- Fim Coluna Principal -->
+
+                </div> <!-- Fim Layout de Conteúdo -->
                 
-                <!-- Coluna Lateral (Análise por Time) -->
-                <div class="league-col-aside">
-                    <div class="league-col-aside-sticky">
-                        <div class="content-card">
-                            <div class="content-card-header">
-                                <h2 class="content-card-title">Análise por Time</h2>
-                            </div>
-                            <div class="content-card-body">
-                                <p class="text-sm text-gray-500 mb-4">Média dos últimos 10 jogos registrados.</p>
-                                <div id="team-analysis-container" class="analysis-grid">
-                                    <!-- Os cards de estatística de time serão inseridos aqui -->
-                                </div>
-                            </div>
-                        </div>
+            </section>
+
+            <!-- === MOSAICO DE LIGAS PARA ANÁLISE === -->
+            <section id="league-mosaic-view" class="hidden">
+                <h1 class="header-title">Selecione uma Liga para Análise de Times</h1>
+                <div class="grid-3-col" id="league-mosaic-container">
+                    <!-- Cards de ligas gerados via JS -->
+                </div>
+            </section>
+
+            <!-- === MOSAICO DE TIMES === -->
+            <section id="team-mosaic-view" class="hidden">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <button id="back-to-league-mosaic-btn" class="btn btn-secondary">
+                        <i data-lucide="arrow-left" class="icon"></i>
+                        Voltar às Ligas
+                    </button>
+                    <h1 id="team-mosaic-title" class="header-title" style="margin-bottom: 0;"></h1>
+                    <div style="width: 80px;"></div>
+                </div>
+                <div class="analysis-grid" id="team-mosaic-container">
+                    <!-- Cards de times gerados via JS -->
+                </div>
+            </section>
+
+            <!-- === TABELA DE JOGOS DO TIME === -->
+            <section id="team-games-table-view" class="hidden">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <button id="back-to-team-mosaic-btn" class="btn btn-secondary">
+                        <i data-lucide="arrow-left" class="icon"></i>
+                        Voltar aos Times
+                    </button>
+                    <h1 id="team-games-title" class="header-title" style="margin-bottom: 0;"></h1>
+                    <div style="width: 80px;"></div>
+                </div>
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h2 class="content-card-title">Registros de Jogos</h2>
                     </div>
-                </div> <!-- Fim Coluna Lateral -->
-                
-            </div> <!-- Fim Grid de Layout -->
+                    <div class="content-card-body">
+                        <div id="team-games-table-container">
+                            <!-- Tabela gerada via JS -->
+                        </div>
+                        <p id="no-team-games-message" style="text-align: center; color: var(--text-color-secondary); padding: 1rem;" class="hidden">Nenhum jogo salvo para este time.</p>
+                    </div>
+                </div>
+            </section>
             
-        </section>
+        </main>
         
-    </div> <!-- fim .main-container -->
+    </div> <!-- Fim .app-layout -->
 
     <script>
         // --- Inicialização do Lucide (Ícones) ---
-        // Atrasamos a chamada inicial para garantir que a biblioteca carregou
         setTimeout(() => {
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
@@ -509,21 +802,38 @@
             "Liga Portugal": ["Arouca", "AVS", "Benfica", "Boavista", "Braga", "Casa Pia", "Estrela Amadora", "Famalicon", "Farense", "Gil Vicente", "Moreirense", "Nacional", "Porto", "Rio Ave", "Santa Clara", "Sporting CP", "Vitória de Guimarães", "Vizela"]
         };
 
+        // Logos das ligas para mosaico
+        const leagueLogos = {
+            "Premier League": "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_logo.svg",
+            "LaLiga": "https://upload.wikimedia.org/wikipedia/commons/1/13/LaLiga_EA_Sports_2023_Vertical_Logo.svg",
+            "Bundesliga": "https://upload.wikimedia.org/wikipedia/en/d/df/Bundesliga_logo_%282017%29.svg",
+            "Serie A": "https://upload.wikimedia.org/wikipedia/en/e/e1/Serie_A_logo_%282019%29.svg",
+            "Ligue 1": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Ligue1_Uber_Eats_Logo.svg",
+            "Liga Portugal": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Liga_Portugal_Betclic_logo.svg"
+        };
+
         // --- Banco de Dados (localStorage) ---
-        const localStorageKey = 'meusJogosDB_v3'; // Chave atualizada
+        const localStorageKey = 'meusJogosDB_v3';
         let allGames = [];
         let currentLeague = null;
+        let currentTeam = null;
 
         // --- Elementos DOM ---
-        const views = {
-            leagueSelection: document.getElementById('league-selection-view'),
-            leagueView: document.getElementById('league-view')
-        };
-        const leagueCards = document.querySelectorAll('.league-card');
-        const backToLeaguesBtn = document.getElementById('back-to-leagues-btn');
+        const welcomeView = document.getElementById('welcome-view');
+        const leagueContent = document.getElementById('league-content');
+        const leagueMosaicView = document.getElementById('league-mosaic-view');
+        const teamMosaicView = document.getElementById('team-mosaic-view');
+        const teamGamesTableView = document.getElementById('team-games-table-view');
+        const leagueCards = document.querySelectorAll('.league-card[data-league]');
+        const leagueMosaicContainer = document.getElementById('league-mosaic-container');
+        const teamMosaicContainer = document.getElementById('team-mosaic-container');
+        const teamGamesTableContainer = document.getElementById('team-games-table-container');
+        const noTeamGamesMessage = document.getElementById('no-team-games-message');
         const leagueViewTitle = document.getElementById('league-view-title');
+        const teamMosaicTitle = document.getElementById('team-mosaic-title');
+        const teamGamesTitle = document.getElementById('team-games-title');
         
-        // Formulário
+        // Formulário e outros
         const gameForm = document.getElementById('game-form');
         const gameDateInput = document.getElementById('game-date');
         const homeTeamSelect = document.getElementById('home-team-select');
@@ -532,11 +842,17 @@
         const awayGoalsInput = document.getElementById('away-goals');
         const homeCornersInput = document.getElementById('home-corners');
         const awayCornersInput = document.getElementById('away-corners');
+        const homeCardsInput = document.getElementById('home-cards');
+        const awayCardsInput = document.getElementById('away-cards');
         
         // Exibição de Dados
         const gameListContainer = document.getElementById('game-list-container');
         const noGamesMessage = document.getElementById('no-games-message');
         const teamAnalysisContainer = document.getElementById('team-analysis-container');
+
+        // Botões de navegação
+        const backToLeagueMosaicBtn = document.getElementById('back-to-league-mosaic-btn');
+        const backToTeamMosaicBtn = document.getElementById('back-to-team-mosaic-btn');
         
         // --- Funções Principais ---
 
@@ -556,27 +872,144 @@
         }
 
         /**
-         * Troca a tela visível
+         * Esconde todas as views e mostra a especificada
          */
-        function showView(viewId) {
-            Object.values(views).forEach(view => view.classList.add('hidden'));
-            if (views[viewId]) {
-                views[viewId].classList.remove('hidden');
-            }
-            // Atualiza os ícones na nova tela
+        function showView(viewToShow) {
+            [welcomeView, leagueContent, leagueMosaicView, teamMosaicView, teamGamesTableView].forEach(view => view.classList.add('hidden'));
+            viewToShow.classList.remove('hidden');
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
         }
 
         /**
-         * Abre a tela de uma liga específica
+         * Renderiza mosaico de ligas para análise
+         */
+        function renderLeagueMosaic() {
+            const leagues = Object.keys(leagueTeams);
+            leagueMosaicContainer.innerHTML = '';
+            leagues.forEach(league => {
+                const logoUrl = leagueLogos[league] || '';
+                const card = `
+                    <div class="mosaic-league-card" data-league="${league}">
+                        <div class="mosaic-logo-container">
+                            <img src="${logoUrl}" alt="Logo ${league}" class="mosaic-league-logo">
+                        </div>
+                        <h3 class="mosaic-league-title">${league}</h3>
+                    </div>
+                `;
+                leagueMosaicContainer.innerHTML += card;
+            });
+            // Adiciona listeners
+            document.querySelectorAll('.mosaic-league-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const leagueName = card.dataset.league;
+                    showTeamMosaic(leagueName);
+                });
+            });
+        }
+
+        /**
+         * Mostra mosaico de times de uma liga
+         */
+        function showTeamMosaic(leagueName) {
+            currentLeague = leagueName;
+            teamMosaicTitle.textContent = `${leagueName} - Times`;
+            const teams = leagueTeams[leagueName].sort();
+            teamMosaicContainer.innerHTML = '';
+            teams.forEach(team => {
+                const card = `
+                    <div class="team-mosaic-card" data-team="${team}" data-league="${leagueName}">
+                        <h3 class="team-mosaic-title">${team}</h3>
+                    </div>
+                `;
+                teamMosaicContainer.innerHTML += card;
+            });
+            // Adiciona listeners
+            document.querySelectorAll('.team-mosaic-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const teamName = card.dataset.team;
+                    showTeamGamesTable(teamName, leagueName);
+                });
+            });
+            showView(teamMosaicView);
+        }
+
+        /**
+         * Mostra tabela de jogos do time
+         */
+        function showTeamGamesTable(teamName, leagueName) {
+            currentTeam = teamName;
+            currentLeague = leagueName;
+            teamGamesTitle.textContent = `${teamName} - Registros de Jogos`;
+            
+            // Pega todos os jogos do time
+            const teamGames = allGames
+                .filter(game => game.league === leagueName && (game.homeTeam === teamName || game.awayTeam === teamName))
+                .sort((a, b) => new Date(b.date) - new Date(a.date)); // Mais recentes primeiro
+
+            if (teamGames.length === 0) {
+                noTeamGamesMessage.classList.remove('hidden');
+                teamGamesTableContainer.innerHTML = '';
+            } else {
+                noTeamGamesMessage.classList.add('hidden');
+                let tableHTML = `
+                    <table class="team-games-table">
+                        <thead>
+                            <tr>
+                                <th>Jogo #</th>
+                                <th>Data</th>
+                                <th>Partida</th>
+                                <th>Gols</th>
+                                <th>Escanteios</th>
+                                <th>Cartões</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                teamGames.forEach((game, index) => {
+                    const gameNumber = index + 1;
+                    const date = new Date(game.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'});
+                    const homeTeam = game.homeTeam;
+                    const awayTeam = game.awayTeam;
+                    const isHome = game.homeTeam === teamName;
+                    const teamSide = isHome ? 'Casa' : 'Fora';
+                    const opponent = isHome ? awayTeam : homeTeam;
+                    const goalsTeam = isHome ? game.homeGoals : game.awayGoals;
+                    const goalsOpp = isHome ? game.awayGoals : game.homeGoals;
+                    const cornersTeam = isHome ? game.homeCorners : game.awayCorners;
+                    const cornersOpp = isHome ? game.awayCorners : game.homeCorners;
+                    const cardsTeam = isHome ? game.homeCards : game.awayCards;
+                    const cardsOpp = isHome ? game.awayCards : game.homeCards;
+
+                    tableHTML += `
+                        <tr>
+                            <td class="game-number">#${gameNumber}</td>
+                            <td>${date}</td>
+                            <td>${teamName} (${teamSide}) vs ${opponent}</td>
+                            <td class="score">${goalsTeam} - ${goalsOpp}</td>
+                            <td class="score">${cornersTeam} - ${cornersOpp}</td>
+                            <td class="score">${cardsTeam} - ${cardsOpp}</td>
+                        </tr>
+                    `;
+                });
+                tableHTML += `
+                        </tbody>
+                    </table>
+                `;
+                teamGamesTableContainer.innerHTML = tableHTML;
+            }
+
+            showView(teamGamesTableView);
+        }
+
+        /**
+         * Abre o conteúdo de uma liga específica (dashboard)
          */
         function openLeagueView(leagueName) {
             currentLeague = leagueName;
             leagueViewTitle.textContent = leagueName;
             
-            // 1. Popula os selects do formulário
             const teams = leagueTeams[leagueName].sort();
             homeTeamSelect.innerHTML = '';
             awayTeamSelect.innerHTML = '';
@@ -585,14 +1018,11 @@
                 awayTeamSelect.innerHTML += `<option value="${team}">${team}</option>`;
             });
 
-            // 2. Define a data de hoje no formulário
             gameDateInput.value = new Date().toISOString().split('T')[0];
 
-            // 3. Renderiza todos os dados da liga (jogos e análise)
             renderLeagueData();
             
-            // 4. Mostra a tela da liga
-            showView('leagueView');
+            showView(leagueContent);
         }
 
         /**
@@ -609,9 +1039,9 @@
         function renderSavedGames() {
             const leagueGames = allGames
                 .filter(game => game.league === currentLeague)
-                .sort((a, b) => new Date(b.date) - new Date(a.date)); // Mais recentes primeiro
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-            gameListContainer.innerHTML = ''; // Limpa a lista
+            gameListContainer.innerHTML = '';
             
             if (leagueGames.length === 0) {
                 noGamesMessage.classList.remove('hidden');
@@ -623,10 +1053,13 @@
                 });
             }
 
-            // Adiciona listeners aos botões de excluir
             document.querySelectorAll('.delete-game-btn').forEach(btn => {
                 btn.addEventListener('click', handleDeleteGame);
             });
+            
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
         }
         
         /**
@@ -634,94 +1067,117 @@
          */
         function renderTeamAnalysis() {
             const teams = leagueTeams[currentLeague].sort();
-            teamAnalysisContainer.innerHTML = ''; // Limpa a análise
+            teamAnalysisContainer.innerHTML = '';
             
             teams.forEach(team => {
-                // Pega todos os jogos do time (casa ou fora)
                 const teamGames = allGames
                     .filter(game => game.league === currentLeague && (game.homeTeam === team || game.awayTeam === team))
-                    .sort((a, b) => new Date(b.date) - new Date(a.date)) // Ordena por data
-                    .slice(0, 10); // Pega apenas os últimos 10
-                    
-                const stats = {
-                    games: teamGames.length,
-                    goalsPro: 0,
-                    goalsCon: 0,
-                    cornersPro: 0,
-                    cornersCon: 0
-                };
-
-                teamGames.forEach(game => {
-                    if (game.homeTeam === team) {
-                        stats.goalsPro += game.homeGoals;
-                        stats.goalsCon += game.awayGoals;
-                        stats.cornersPro += game.homeCorners;
-                        stats.cornersCon += game.awayCorners;
-                    } else { // awayTeam === team
-                        stats.goalsPro += game.awayGoals;
-                        stats.goalsCon += game.homeGoals;
-                        stats.cornersPro += game.awayCorners;
-                        stats.cornersCon += game.homeCorners;
-                    }
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .slice(0, 10);
+                
+                const homeGames = teamGames.filter(game => game.homeTeam === team);
+                const awayGames = teamGames.filter(game => game.awayTeam === team);
+                
+                // Stats Gols e Escanteios
+                let goalsHomeSum = 0, cornersHomeSum = 0;
+                homeGames.forEach(game => {
+                    goalsHomeSum += game.homeGoals;
+                    cornersHomeSum += game.homeCorners;
                 });
-
-                // Calcula médias
-                const avgGoalsPro = (stats.games > 0 ? (stats.goalsPro / stats.games) : 0).toFixed(1);
-                const avgGoalsCon = (stats.games > 0 ? (stats.goalsCon / stats.games) : 0).toFixed(1);
-                const avgCornersPro = (stats.games > 0 ? (stats.cornersPro / stats.games) : 0).toFixed(1);
-                const avgCornersCon = (stats.games > 0 ? (stats.cornersCon / stats.games) : 0).toFixed(1);
-
+                let goalsAwaySum = 0, cornersAwaySum = 0;
+                awayGames.forEach(game => {
+                    goalsAwaySum += game.awayGoals;
+                    cornersAwaySum += game.awayCorners;
+                });
+                
+                const avgGoalsHome = homeGames.length > 0 ? (goalsHomeSum / homeGames.length) : 0;
+                const avgGoalsAway = awayGames.length > 0 ? (goalsAwaySum / awayGames.length) : 0;
+                const avgCornersHome = homeGames.length > 0 ? (cornersHomeSum / homeGames.length) : 0;
+                const avgCornersAway = awayGames.length > 0 ? (cornersAwaySum / awayGames.length) : 0;
+                
+                // Stats Cartões
+                let cardsHomeSum = 0, cardsAwaySum = 0;
+                homeGames.forEach(game => cardsHomeSum += game.homeCards);
+                awayGames.forEach(game => cardsAwaySum += game.awayCards);
+                
+                const avgCardsHome = homeGames.length > 0 ? (cardsHomeSum / homeGames.length) : 0;
+                const avgCardsAway = awayGames.length > 0 ? (cardsAwaySum / awayGames.length) : 0;
+                
                 const analysisCard = `
-                    <div class="team-stats-card">
+                    <div class="team-stats-card" data-team="${team}">
                         <h3 class="team-stats-header">${team}</h3>
                         <div class="stats-grid">
                             <div class="stat-item">
-                                <div class="stat-label">Média Gols Pró</div>
-                                <div class="stat-value stat-value-pro">${avgGoalsPro}</div>
+                                <div class="stat-label">Média Gols Casa</div>
+                                <div class="stat-value">${avgGoalsHome.toFixed(1)}</div>
                             </div>
                             <div class="stat-item">
-                                <div class="stat-label">Média Gols Contra</div>
-                                <div class="stat-value stat-value-con">${avgGoalsCon}</div>
+                                <div class="stat-label">Média Gols Fora</div>
+                                <div class="stat-value">${avgGoalsAway.toFixed(1)}</div>
                             </div>
                             <div class="stat-item">
-                                <div class="stat-label">Média Escan. Pró</div>
-                                <div class="stat-value stat-value-pro">${avgCornersPro}</div>
+                                <div class="stat-label">Média Escan. Casa</div>
+                                <div class="stat-value">${avgCornersHome.toFixed(1)}</div>
                             </div>
                             <div class="stat-item">
-                                <div class="stat-label">Média Escan. Contra</div>
-                                <div class="stat-value stat-value-con">${avgCornersCon}</div>
+                                <div class="stat-label">Média Escan. Fora</div>
+                                <div class="stat-value">${avgCornersAway.toFixed(1)}</div>
                             </div>
                         </div>
-                        <p class="stat-total-games">Baseado nos últimos ${stats.games} jogos</p>
+                        <div class="stats-grid" style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                            <div class="stat-item">
+                                <div class="stat-label">Média Cart. Casa</div>
+                                <div class="stat-value stat-value-con">${avgCardsHome.toFixed(1)}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Média Cart. Fora</div>
+                                <div class="stat-value stat-value-con">${avgCardsAway.toFixed(1)}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Jogos Casa/Fora</div>
+                                <div class="stat-value">${homeGames.length}/${awayGames.length}</div>
+                            </div>
+                            <div class="stat-item"></div>
+                        </div>
                     </div>
                 `;
                 teamAnalysisContainer.innerHTML += analysisCard;
             });
-            
-            // Atualiza ícones do Lucide (caso haja algum nos cards de análise, o que não há agora)
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
+
+            // Adiciona listeners para análise single (opcional, mas útil)
+            document.querySelectorAll('.team-stats-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const teamName = card.dataset.team;
+                    showTeamGamesTable(teamName, currentLeague);
+                });
+            });
         }
 
 
         /**
          * Cria o HTML para um card de jogo salvo
          */
-        function createGameCard(game) {
+        function createGameCard(game, hideDelete = false) {
             const homeScoreClass = game.homeGoals > game.awayGoals ? 'font-bold' : '';
             const awayScoreClass = game.awayGoals > game.homeGoals ? 'font-bold' : '';
+
+            let deleteBtn = '';
+            if (!hideDelete) {
+                deleteBtn = `
+                    <button class="btn btn-danger btn-sm delete-game-btn" data-game-id="${game.id}">
+                        <i data-lucide="trash-2" style="width: 14px; height: 14px; margin-right: 0;"></i>
+                    </button>
+                `;
+            }
 
             return `
                 <div class="game-card">
                     <div class="game-card-header">
                         <span class="game-date">${new Date(game.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'})}</span>
-                        <button class="btn btn-danger btn-sm delete-game-btn" data-game-id="${game.id}">
-                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-                        </button>
+                        ${deleteBtn}
                     </div>
                     <div class="game-teams">
-                        ${game.homeTeam} <span class="text-gray-400">vs</span> ${game.awayTeam}
+                        ${game.homeTeam} <span style="color: var(--text-color-secondary); font-weight: 400;">vs</span> ${game.awayTeam}
                     </div>
                     <div class="game-score-details">
                         <div class="score-block">
@@ -734,6 +1190,10 @@
                             Escanteios
                             <span>${game.homeCorners} x ${game.awayCorners}</span>
                         </div>
+                        <div class="score-block">
+                            Cartões
+                            <span>${game.homeCards} x ${game.awayCards}</span>
+                        </div>
                     </div>
                 </div>
             `;
@@ -745,9 +1205,8 @@
          * Salva um novo jogo
          */
         function handleSaveGame(event) {
-            event.preventDefault(); // Impede o envio real do formulário
+            event.preventDefault();
             
-            // Validação simples
             if (homeTeamSelect.value === awayTeamSelect.value) {
                 alert("O time da casa não pode ser igual ao time visitante.");
                 return;
@@ -762,20 +1221,15 @@
                 homeGoals: parseInt(homeGoalsInput.value, 10),
                 awayGoals: parseInt(awayGoalsInput.value, 10),
                 homeCorners: parseInt(homeCornersInput.value, 10),
-                awayCorners: parseInt(awayCornersInput.value, 10)
+                awayCorners: parseInt(awayCornersInput.value, 10),
+                homeCards: parseInt(homeCardsInput.value, 10),
+                awayCards: parseInt(awayCardsInput.value, 10)
             };
             
-            // Adiciona o novo jogo
             allGames.push(newGame);
-            
-            // Salva no localStorage
             saveAllGames();
-            
-            // Reseta o formulário
             gameForm.reset();
-            gameDateInput.value = new Date().toISOString().split('T')[0]; // Reseta data p/ hoje
-            
-            // Re-renderiza tudo (lista de jogos e análise)
+            gameDateInput.value = new Date().toISOString().split('T')[0];
             renderLeagueData();
         }
 
@@ -784,38 +1238,46 @@
          */
         function handleDeleteGame(event) {
             const gameId = event.currentTarget.dataset.gameId;
-            // Confirmação simples (pode ser substituída por um modal)
             if (confirm('Tem certeza que deseja excluir este jogo?')) {
                 allGames = allGames.filter(game => game.id !== gameId);
                 saveAllGames();
-                // Re-renderiza tudo (lista de jogos e análise)
                 renderLeagueData();
             }
         }
 
         // --- Inicialização ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Carrega os jogos salvos
             loadAllGames();
 
-            // Adiciona listeners aos cards das ligas
-            leagueCards.forEach(card => {
-                card.addEventListener('click', () => {
-                    const leagueName = card.dataset.league;
-                    openLeagueView(leagueName);
-                });
+            // Listeners para sidebar (ligas e análise)
+            document.querySelectorAll('.league-card').forEach(card => {
+                if (card.dataset.menu === 'analise-time') {
+                    card.addEventListener('click', () => {
+                        renderLeagueMosaic();
+                        showView(leagueMosaicView);
+                    });
+                } else if (card.dataset.league) {
+                    card.addEventListener('click', () => {
+                        const leagueName = card.dataset.league;
+                        openLeagueView(leagueName);
+                    });
+                }
             });
 
-            // Listener do botão de Voltar
-            backToLeaguesBtn.addEventListener('click', () => {
-                showView('leagueSelection');
+            // Listeners para navegação nos mosaicos
+            backToLeagueMosaicBtn.addEventListener('click', () => {
+                showView(leagueMosaicView);
+            });
+            backToTeamMosaicBtn.addEventListener('click', () => {
+                const leagueName = currentLeague;
+                showTeamMosaic(leagueName);
             });
 
             // Listener do formulário
             gameForm.addEventListener('submit', handleSaveGame);
             
-            // Mostra a tela inicial
-            showView('leagueSelection');
+            // Mostra a tela inicial de boas-vindas
+            showView(welcomeView);
         });
     </script>
 </body>
