@@ -1,5 +1,5 @@
 // --- IMPORTS DO FIREBASE ---
-// Usamos a versão 'compat' para uma transição mais fácil, mas a modular é preferível para produção.
+// ... (O usuário forneceu o snippet modular, mas a lógica de migração do localStorage é complexa.
 // (O usuário forneceu o snippet modular, mas a lógica de migração do localStorage é complexa.
 // Vou usar os imports modulares que são o padrão moderno.)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -15,6 +15,7 @@ import {
     setDoc, 
     addDoc, 
     deleteDoc, 
+    updateDoc, // ADICIONADO 'updateDoc'
     onSnapshot, 
     collection, 
     query, 
@@ -89,7 +90,32 @@ const filterTodayBtn = document.getElementById('filter-today');
 const filterWeekBtn = document.getElementById('filter-week');
 const filterMonthBtn = document.getElementById('filter-month');
 const filterButtons = [filterAllBtn, filterTodayBtn, filterWeekBtn, filterMonthBtn];
-    
+
+// --- REFERÊNCIAS DO DOM (MODAIS DE EDIÇÃO - NOVOS) ---
+const editBetModal = document.getElementById('edit-bet-modal');
+const editBetForm = document.getElementById('edit-bet-form');
+const editBetIdInput = document.getElementById('edit-bet-id');
+const editBetDescriptionInput = document.getElementById('edit-bet-description');
+const editBetAmountInput = document.getElementById('edit-bet-amount');
+const editReturnAmountInput = document.getElementById('edit-return-amount');
+const cancelEditBetBtn = document.getElementById('cancel-edit-bet');
+
+const editPotentialModal = document.getElementById('edit-potential-modal');
+const editPotentialForm = document.getElementById('edit-potential-form');
+const editPotentialIdInput = document.getElementById('edit-potential-id');
+const editPotentialAmountInput = document.getElementById('edit-potential-amount');
+const editPotentialReturnInput = document.getElementById('edit-potential-return');
+const cancelEditPotentialBtn = document.getElementById('cancel-edit-potential');
+
+const editSimModal = document.getElementById('edit-sim-modal');
+const editSimForm = document.getElementById('edit-sim-form');
+const editSimIdInput = document.getElementById('edit-sim-id');
+const editSimIndexInput = document.getElementById('edit-sim-index');
+const editSimStakeInput = document.getElementById('edit-sim-stake');
+const editSimOddInput = document.getElementById('edit-sim-odd');
+const editSimResultInput = document.getElementById('edit-sim-result');
+const cancelEditSimBtn = document.getElementById('cancel-edit-sim');
+
 // Constantes de data (movidas para o topo para acesso global)
 const now = new Date();
 const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
@@ -311,6 +337,53 @@ function initializeAppLogic(userId) {
         }
     }
 
+    // (NOVO) Abre o Modal de Edição de Aposta Real
+    window.openEditBetModal = function(id) {
+        const bet = allBets.find(b => b.id === id);
+        if (!bet) {
+            console.error("Aposta não encontrada para editar");
+            return;
+        }
+        editBetIdInput.value = id;
+        editBetDescriptionInput.value = bet.description;
+        editBetAmountInput.value = bet.amount;
+        editReturnAmountInput.value = bet.returned_actual;
+        editBetModal.classList.remove('hidden');
+    }
+
+    // (NOVO) Fecha o Modal de Edição de Aposta Real
+    function closeEditBetModal() {
+        editBetModal.classList.add('hidden');
+    }
+
+    // (NOVO) Salva as Alterações da Aposta Real
+    async function handleSaveBetChanges(e) {
+        e.preventDefault();
+        const id = editBetIdInput.value;
+        const amount = parseFloat(editBetAmountInput.value);
+        const returned_actual = parseFloat(editReturnAmountInput.value);
+        
+        if (!id || isNaN(amount) || isNaN(returned_actual)) return;
+
+        const profit_actual = returned_actual - amount;
+        const updatedData = {
+            description: editBetDescriptionInput.value || 'Aposta',
+            amount: amount,
+            returned_actual: returned_actual,
+            profit_actual: profit_actual
+        };
+
+        try {
+            const betDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/bets`, id);
+            await updateDoc(betDocRef, updatedData);
+            console.log("Aposta real atualizada!");
+            closeEditBetModal();
+        } catch (error) {
+            console.error("Erro ao atualizar aposta real: ", error);
+        }
+    }
+
+
     // Deleta uma Aposta Potencial
     window.deletePotentialBet = async function(id) {
         if (!id) return console.error("ID inválido para exclusão");
@@ -321,6 +394,51 @@ function initializeAppLogic(userId) {
             console.error("Erro ao deletar aposta potencial: ", error);
         }
     }
+
+    // (NOVO) Abre o Modal de Edição de Aposta Potencial
+    window.openEditPotentialModal = function(id) {
+        const bet = allPotentialBets.find(b => b.id === id);
+        if (!bet) {
+            console.error("Aposta potencial não encontrada para editar");
+            return;
+        }
+        editPotentialIdInput.value = id;
+        editPotentialAmountInput.value = bet.amount;
+        editPotentialReturnInput.value = bet.returned_potential;
+        editPotentialModal.classList.remove('hidden');
+    }
+
+    // (NOVO) Fecha o Modal de Edição de Aposta Potencial
+    function closeEditPotentialModal() {
+        editPotentialModal.classList.add('hidden');
+    }
+
+    // (NOVO) Salva as Alterações da Aposta Potencial
+    async function handleSavePotentialChanges(e) {
+        e.preventDefault();
+        const id = editPotentialIdInput.value;
+        const amount = parseFloat(editPotentialAmountInput.value);
+        const returned_potential = parseFloat(editPotentialReturnInput.value);
+        
+        if (!id || isNaN(amount) || isNaN(returned_potential)) return;
+
+        const profit_potential = returned_potential - amount;
+        const updatedData = {
+            amount: amount,
+            returned_potential: returned_potential,
+            profit_potential: profit_potential
+        };
+
+        try {
+            const betDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/potentialBets`, id);
+            await updateDoc(betDocRef, updatedData);
+            console.log("Aposta potencial atualizada!");
+            closeEditPotentialModal();
+        } catch (error) {
+            console.error("Erro ao atualizar aposta potencial: ", error);
+        }
+    }
+
 
     // Registra o resultado (Green/Red) na Simulação
     async function recordSimBet(index, resultType) {
@@ -370,6 +488,64 @@ function initializeAppLogic(userId) {
         }
     }
 
+    // (NOVO) Abre o Modal de Edição de Simulação
+    window.openEditSimModal = function(index, id) {
+        const betList = getStrategyBetList(index);
+        const bet = betList.find(b => b.id === id);
+        if (!bet) {
+            console.error("Simulação não encontrada para editar");
+            return;
+        }
+        editSimIdInput.value = id;
+        editSimIndexInput.value = index;
+        editSimStakeInput.value = bet.stake;
+        editSimOddInput.value = bet.odd;
+        editSimResultInput.value = bet.result;
+        editSimModal.classList.remove('hidden');
+    }
+
+    // (NOVO) Fecha o Modal de Edição de Simulação
+    function closeEditSimModal() {
+        editSimModal.classList.add('hidden');
+    }
+
+    // (NOVO) Salva as Alterações da Simulação
+    async function handleSaveSimChanges(e) {
+        e.preventDefault();
+        const id = editSimIdInput.value;
+        const index = parseInt(editSimIndexInput.value);
+        const stake = parseFloat(editSimStakeInput.value);
+        const odd = parseFloat(editSimOddInput.value);
+        const result = editSimResultInput.value;
+
+        if (!id || !index || isNaN(stake) || isNaN(odd) || !result) return;
+
+        // Recalcula o lucro
+        const potentialReturn = stake * odd;
+        const profit = (result === 'green') ? (potentialReturn - stake) : -stake;
+        
+        const updatedData = {
+            stake: stake,
+            odd: odd,
+            result: result,
+            profit: profit
+        };
+
+        let targetCollectionPath;
+        if (index === 1) targetCollectionPath = `simBets1`;
+        else if (index === 2) targetCollectionPath = `simBets2`;
+        else targetCollectionPath = `simBets3`;
+
+        try {
+            const simDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/${targetCollectionPath}`, id);
+            await updateDoc(simDocRef, updatedData);
+            console.log(`Simulação (Est. ${index}) atualizada!`);
+            closeEditSimModal();
+        } catch (error) {
+            console.error(`Erro ao atualizar simulação (Est. ${index}): `, error);
+        }
+    }
+
 
     // --- EVENT LISTENERS (Formulários, Filtros, etc) ---
     // (O onSnapshot já lida com a atualização dos dados,
@@ -377,6 +553,15 @@ function initializeAppLogic(userId) {
     initialBalanceInput.addEventListener('blur', saveInitialBalance);
     betForm.addEventListener('submit', addBet);
     potentialBetForm.addEventListener('submit', addPotentialBet);
+
+    // (NOVOS) Listeners dos Modais
+    editBetForm.addEventListener('submit', handleSaveBetChanges);
+    cancelEditBetBtn.addEventListener('click', closeEditBetModal);
+    editPotentialForm.addEventListener('submit', handleSavePotentialChanges);
+    cancelEditPotentialBtn.addEventListener('click', closeEditPotentialModal);
+    editSimForm.addEventListener('submit', handleSaveSimChanges);
+    cancelEditSimBtn.addEventListener('click', closeEditSimModal);
+
 
     filterAllBtn.addEventListener('click', () => applyFilter('all'));
     filterTodayBtn.addEventListener('click', () => applyFilter('today'));
@@ -540,7 +725,12 @@ function initializeAppLogic(userId) {
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.returned_actual)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${profitClassActual}">${formatCurrency(bet.profit_actual)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="deleteBet('${bet.id}')" class="text-red-500 hover:text-red-700" title="Excluir Aposta">
+                        <button onclick="openEditBetModal('${bet.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Editar Aposta">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" />
+                            </svg>
+                        </button>
+                        <button onclick="deleteBet('${bet.id}')" class="text-red-500 hover:text-red-700 inline-flex" title="Excluir Aposta">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
@@ -569,7 +759,12 @@ function initializeAppLogic(userId) {
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.returned_potential)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${profitClassPotential}">${formatCurrency(bet.profit_potential)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="deletePotentialBet('${bet.id}')" class="text-red-500 hover:text-red-700" title="Excluir Simulação">
+                        <button onclick="openEditPotentialModal('${bet.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Editar Simulação">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" />
+                            </svg>
+                        </button>
+                        <button onclick="deletePotentialBet('${bet.id}')" class="text-red-500 hover:text-red-700 inline-flex" title="Excluir Simulação">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
@@ -764,7 +959,10 @@ function initializeAppLogic(userId) {
                     <td class="p-2 ${resultClass}">${bet.result === 'green' ? 'Green' : 'Red'}</td>
                     <td class="p-2 ${profitClass}">${formatCurrency(bet.profit)}</td>
                     <td class="p-2 text-right">
-                        <button onclick="deleteSimBet(${index}, '${bet.id}')" class="text-gray-400 hover:text-red-500" title="Excluir">
+                        <button onclick="openEditSimModal(${index}, '${bet.id}')" class="text-gray-500 hover:text-blue-600 mr-2" title="Editar">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" /></svg>
+                        </button>
+                        <button onclick="deleteSimBet(${index}, '${bet.id}')" class="text-gray-400 hover:text-red-500 inline-flex" title="Excluir">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                     </td>
