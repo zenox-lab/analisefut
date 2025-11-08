@@ -1,7 +1,4 @@
 // --- IMPORTS DO FIREBASE ---
-// ... (O usuário forneceu o snippet modular, mas a lógica de migração do localStorage é complexa.
-// (O usuário forneceu o snippet modular, mas a lógica de migração do localStorage é complexa.
-// Vou usar os imports modulares que são o padrão moderno.)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { 
     getAuth, 
@@ -15,14 +12,14 @@ import {
     setDoc, 
     addDoc, 
     deleteDoc, 
-    updateDoc, // ADICIONADO 'updateDoc'
     onSnapshot, 
     collection, 
     query, 
     Timestamp, 
     serverTimestamp,
-    orderBy,
-    setLogLevel
+    orderBy, // Importado mas não usado na query principal
+    setLogLevel,
+    updateDoc // Importa a função de atualização
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // --- CONFIG DO FIREBASE (FORNECIDA PELO USUÁRIO) ---
@@ -40,7 +37,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-setLogLevel('debug'); // Útil para ver logs do Firestore
+// setLogLevel('debug'); // Descomente para depuração profunda do Firestore
 
 // --- VARIÁVEIS GLOBAIS DO APP ---
 let currentUserId = null; // ID do usuário logado
@@ -90,32 +87,7 @@ const filterTodayBtn = document.getElementById('filter-today');
 const filterWeekBtn = document.getElementById('filter-week');
 const filterMonthBtn = document.getElementById('filter-month');
 const filterButtons = [filterAllBtn, filterTodayBtn, filterWeekBtn, filterMonthBtn];
-
-// --- REFERÊNCIAS DO DOM (MODAIS DE EDIÇÃO - NOVOS) ---
-const editBetModal = document.getElementById('edit-bet-modal');
-const editBetForm = document.getElementById('edit-bet-form');
-const editBetIdInput = document.getElementById('edit-bet-id');
-const editBetDescriptionInput = document.getElementById('edit-bet-description');
-const editBetAmountInput = document.getElementById('edit-bet-amount');
-const editReturnAmountInput = document.getElementById('edit-return-amount');
-const cancelEditBetBtn = document.getElementById('cancel-edit-bet');
-
-const editPotentialModal = document.getElementById('edit-potential-modal');
-const editPotentialForm = document.getElementById('edit-potential-form');
-const editPotentialIdInput = document.getElementById('edit-potential-id');
-const editPotentialAmountInput = document.getElementById('edit-potential-amount');
-const editPotentialReturnInput = document.getElementById('edit-potential-return');
-const cancelEditPotentialBtn = document.getElementById('cancel-edit-potential');
-
-const editSimModal = document.getElementById('edit-sim-modal');
-const editSimForm = document.getElementById('edit-sim-form');
-const editSimIdInput = document.getElementById('edit-sim-id');
-const editSimIndexInput = document.getElementById('edit-sim-index');
-const editSimStakeInput = document.getElementById('edit-sim-stake');
-const editSimOddInput = document.getElementById('edit-sim-odd');
-const editSimResultInput = document.getElementById('edit-sim-result');
-const cancelEditSimBtn = document.getElementById('cancel-edit-sim');
-
+    
 // Constantes de data (movidas para o topo para acesso global)
 const now = new Date();
 const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
@@ -123,6 +95,22 @@ const startOfWeek = new Date(now);
 startOfWeek.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1)); // Segunda como início da semana
 startOfWeek.setHours(0, 0, 0, 0);
 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+
+// --- MODAIS DE EDIÇÃO (REFERÊNCIAS) ---
+const modalBackdrop = document.getElementById('modal-backdrop');
+// Modal 1: Editar Aposta Real
+const editBetModal = document.getElementById('edit-bet-modal');
+const editBetForm = document.getElementById('edit-bet-form');
+const cancelEditBetBtn = document.getElementById('cancel-edit-bet');
+// Modal 2: Editar Aposta Potencial
+const editPotentialModal = document.getElementById('edit-potential-modal');
+const editPotentialForm = document.getElementById('edit-potential-form');
+const cancelEditPotentialBtn = document.getElementById('cancel-edit-potential');
+// Modal 3: Editar Simulação de Estratégia
+const editSimModal = document.getElementById('edit-sim-modal');
+const editSimForm = document.getElementById('edit-sim-form');
+const cancelEditSimBtn = document.getElementById('cancel-edit-sim');
+
 
 // ===================================================================
 // INICIALIZAÇÃO E AUTENTICAÇÃO
@@ -167,866 +155,954 @@ function initializeAppLogic(userId) {
 
     // --- CONFIGURA OS LISTENERS DE NAVEGAÇÃO ---
     navInicio.addEventListener('click', (e) => { e.preventDefault(); showView('inicio'); });
-    navEstrategia.addEventListener('click', (e) => { e.preventDefault(); showView('estrategia'); }); // CORRIGIDO: Era navEstrategIA
+    navEstrategia.addEventListener('click', (e) => { e.preventDefault(); showView('estrategia'); }); // CORRIGIDO (era navEstrategIA)
 
     // --- CONFIGURA LISTENERS DE DADOS (ONSNAPSHOT) ---
     // O onSnapshot atualiza os dados em tempo real
-
-    // 1. Saldo Inicial (Settings)
-    onSnapshot(settingsDocRef, (doc) => {
-        if (doc.exists()) {
-            initialBalance = doc.data().initialBalance || 0;
+    
+    // 1. Configurações (Saldo Inicial)
+    onSnapshot(settingsDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const settings = docSnap.data();
+            initialBalance = settings.initialBalance || 0;
+            initialBalanceInput.value = initialBalance.toFixed(2);
         } else {
-            initialBalance = 0; // Nenhum documento de settings ainda
+            console.log("Documento de configurações não encontrado, criando um novo...");
+            initialBalance = 0;
+            initialBalanceInput.value = "0.00";
         }
-        initialBalanceInput.value = initialBalance.toFixed(2);
-        // Atualiza a UI que depende do saldo inicial
-        applyFilter(currentFilter);
-    }, (error) => console.error("Erro ao ouvir settings:", error));
-
+        // Atualiza a UI após carregar o saldo
+        applyFilter(currentFilter); // Recalcula totais e gráficos
+    }, (error) => console.error("Erro ao ouvir 'settings':", error));
+    
     // 2. Apostas Reais (Bets)
-    onSnapshot(query(betsCollectionRef), (snapshot) => { // REMOVIDO: orderBy('createdAt', 'desc')
+    onSnapshot(query(betsCollectionRef), (snapshot) => { // (CORREÇÃO) REMOVIDO: orderBy('createdAt', 'desc')
         allBets = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
-            allBets.push({ 
-                id: doc.id, // ID do Documento Firestore
+            allBets.push({
+                id: doc.id,
                 ...data,
-                // Converte Timestamp do Firebase para Date do JS
+                // Converte Timestamp do Firebase para Date, ou usa Date atual se não houver
                 createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
             });
         });
-        // (NOVO) Ordena os dados no JavaScript (mais novo primeiro)
+        // (CORREÇÃO) Ordena os dados no JavaScript (mais novo primeiro)
         allBets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         // Após atualizar os dados, re-renderiza tudo
         applyFilter(currentFilter);
+        console.log("Apostas reais carregadas:", allBets.length);
     }, (error) => console.error("Erro ao ouvir 'bets':", error));
 
     // 3. Apostas Potenciais
-    onSnapshot(query(potentialBetsCollectionRef), (snapshot) => { // REMOVIDO: orderBy('createdAt', 'desc')
+    onSnapshot(query(potentialBetsCollectionRef), (snapshot) => { // (CORREÇÃO) REMOVIDO: orderBy('createdAt', 'desc')
         allPotentialBets = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
-            allPotentialBets.push({ 
-                id: doc.id, 
+            allPotentialBets.push({
+                id: doc.id,
                 ...data,
                 createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
             });
         });
-        // (NOVO) Ordena os dados no JavaScript (mais novo primeiro)
+        // (CORREÇÃO) Ordena os dados no JavaScript (mais novo primeiro)
         allPotentialBets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        applyFilter(currentFilter);
+        applyFilter(currentFilter); // Re-renderiza gráficos e tabela
+        console.log("Apostas potenciais carregadas:", allPotentialBets.length);
     }, (error) => console.error("Erro ao ouvir 'potentialBets':", error));
     
     // 4. Simulação Estratégia 1
-    onSnapshot(query(simBets1CollectionRef), (snapshot) => { // REMOVIDO: orderBy('createdAt', 'desc')
+    onSnapshot(query(simBets1CollectionRef), (snapshot) => { // (CORREÇÃO) REMOVIDO: orderBy('createdAt', 'desc')
         strategy1Bets = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
-            strategy1Bets.push({ 
-                id: doc.id, 
+            strategy1Bets.push({
+                id: doc.id,
                 ...data,
                 createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
             });
         });
-        // (NOVO) Ordena os dados no JavaScript (mais novo primeiro)
+        // (CORREÇÃO) Ordena os dados no JavaScript (mais novo primeiro)
         strategy1Bets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         // Re-renderiza a UI dessa estratégia
         renderStrategySimulation(1);
+        console.log("Simulações Est. 1 carregadas:", strategy1Bets.length);
     }, (error) => console.error("Erro ao ouvir 'simBets1':", error));
 
     // 5. Simulação Estratégia 2
-    onSnapshot(query(simBets2CollectionRef), (snapshot) => { // REMOVIDO: orderBy('createdAt', 'desc')
+    onSnapshot(query(simBets2CollectionRef), (snapshot) => { // (CORREÇÃO) REMOVIDO: orderBy('createdAt', 'desc')
         strategy2Bets = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
-            strategy2Bets.push({ 
-                id: doc.id, 
+            strategy2Bets.push({
+                id: doc.id,
                 ...data,
                 createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
             });
         });
-        // (NOVO) Ordena os dados no JavaScript (mais novo primeiro)
+        // (CORREÇÃO) Ordena os dados no JavaScript (mais novo primeiro)
         strategy2Bets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         renderStrategySimulation(2);
+        console.log("Simulações Est. 2 carregadas:", strategy2Bets.length);
     }, (error) => console.error("Erro ao ouvir 'simBets2':", error));
 
     // 6. Simulação Estratégia 3
-    onSnapshot(query(simBets3CollectionRef), (snapshot) => { // REMOVIDO: orderBy('createdAt', 'desc')
+    onSnapshot(query(simBets3CollectionRef), (snapshot) => { // (CORREÇÃO) REMOVIDO: orderBy('createdAt', 'desc')
         strategy3Bets = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
-            strategy3Bets.push({ 
-                id: doc.id, 
+            strategy3Bets.push({
+                id: doc.id,
                 ...data,
                 createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
             });
         });
-        // (NOVO) Ordena os dados no JavaScript (mais novo primeiro)
+        // (CORREÇÃO) Ordena os dados no JavaScript (mais novo primeiro)
         strategy3Bets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         renderStrategySimulation(3);
+        console.log("Simulações Est. 3 carregadas:", strategy3Bets.length);
     }, (error) => console.error("Erro ao ouvir 'simBets3':", error));
 
+    
+    // --- LISTENERS DE EVENTOS (FORMULÁRIOS, BOTÕES, ETC.) ---
 
-    // --- FUNÇÕES DE LÓGICA (MODIFICADAS PARA FIREBASE) ---
-
-    // Salva o Saldo Inicial no Firestore
-    async function saveInitialBalance() {
+    // Salvar Saldo Inicial (ao perder o foco)
+    initialBalanceInput.addEventListener('change', () => {
         const newBalance = parseFloat(initialBalanceInput.value) || 0;
-        try {
-            await setDoc(settingsDocRef, { initialBalance: newBalance }, { merge: true });
-            console.log("Saldo inicial salvo!");
-            initialBalance = newBalance; // Atualiza o estado local
-            initialBalanceInput.value = initialBalance.toFixed(2);
-            applyFilter(currentFilter); // Atualiza tudo
-        } catch (error) {
-            console.error("Erro ao salvar saldo inicial: ", error);
-        }
-    }
+        setDoc(settingsDocRef, { initialBalance: newBalance }, { merge: true })
+            .then(() => {
+                console.log("Saldo inicial salvo:", newBalance);
+            })
+            .catch(e => console.error("Erro ao salvar saldo inicial:", e));
+    });
 
-    // Adiciona uma Aposta Real
-    async function addBet(e) {
+    // Filtros de Data
+    filterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            filterButtons.forEach(btn => {
+                btn.classList.remove('bg-green-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            });
+            button.classList.add('bg-green-600', 'text-white');
+            button.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            currentFilter = button.id.replace('filter-', '');
+            applyFilter(currentFilter);
+        });
+    });
+
+    // Formulário: Adicionar Aposta Real
+    betForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const description = descriptionInput.value || 'Aposta';
         const amount = parseFloat(amountInput.value);
-        const returned_actual = parseFloat(returnInput.value);
-        if (isNaN(amount) || isNaN(returned_actual) || amount < 0 || returned_actual < 0) return;
-        const profit_actual = returned_actual - amount;
-        
-        const newBet = { 
-            description, 
-            amount, 
-            returned_actual, 
-            profit_actual,
-            createdAt: serverTimestamp() // Usa o timestamp do servidor
-        };
-        
-        try {
-            await addDoc(betsCollectionRef, newBet);
-            console.log("Aposta real adicionada!");
-            betForm.reset();
-            descriptionInput.focus();
-        } catch (error) {
-            console.error("Erro ao adicionar aposta real: ", error);
-        }
-    }
-    
-    // Adiciona uma Aposta Potencial
-    async function addPotentialBet(e) {
-        e.preventDefault();
-        const amount = parseFloat(potentialAmountInput.value);
-        const returned_potential = parseFloat(potentialReturnInput.value);
-        if (isNaN(amount) || isNaN(returned_potential) || amount < 0 || returned_potential < 0) return;
-        const profit_potential = returned_potential - amount;
-        
-        const newPotentialBet = { 
-            amount, 
-            returned_potential, 
-            profit_potential,
-            createdAt: serverTimestamp()
-        };
+        const returned = parseFloat(returnInput.value);
 
-        try {
-            await addDoc(potentialBetsCollectionRef, newPotentialBet);
-            console.log("Aposta potencial adicionada!");
-            potentialBetForm.reset();
-            potentialAmountInput.focus();
-        } catch (error) {
-            console.error("Erro ao adicionar aposta potencial: ", error);
-        }
-    }
-
-    // Deleta uma Aposta Real
-    window.deleteBet = async function(id) {
-        if (!id) return console.error("ID inválido para exclusão");
-        try {
-            await deleteDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/bets`, id));
-            console.log("Aposta real deletada!");
-        } catch (error) {
-            console.error("Erro ao deletar aposta real: ", error);
-        }
-    }
-
-    // (NOVO) Abre o Modal de Edição de Aposta Real
-    window.openEditBetModal = function(id) {
-        const bet = allBets.find(b => b.id === id);
-        if (!bet) {
-            console.error("Aposta não encontrada para editar");
+        if (isNaN(amount) || isNaN(returned)) {
+            alert("Por favor, insira valores numéricos válidos.");
             return;
         }
-        editBetIdInput.value = id;
-        editBetDescriptionInput.value = bet.description;
-        editBetAmountInput.value = bet.amount;
-        editReturnAmountInput.value = bet.returned_actual;
-        editBetModal.classList.remove('hidden');
-    }
-
-    // (NOVO) Fecha o Modal de Edição de Aposta Real
-    function closeEditBetModal() {
-        editBetModal.classList.add('hidden');
-    }
-
-    // (NOVO) Salva as Alterações da Aposta Real
-    async function handleSaveBetChanges(e) {
-        e.preventDefault();
-        const id = editBetIdInput.value;
-        const amount = parseFloat(editBetAmountInput.value);
-        const returned_actual = parseFloat(editReturnAmountInput.value);
-        
-        if (!id || isNaN(amount) || isNaN(returned_actual)) return;
-
-        const profit_actual = returned_actual - amount;
-        const updatedData = {
-            description: editBetDescriptionInput.value || 'Aposta',
-            amount: amount,
-            returned_actual: returned_actual,
-            profit_actual: profit_actual
-        };
-
-        try {
-            const betDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/bets`, id);
-            await updateDoc(betDocRef, updatedData);
-            console.log("Aposta real atualizada!");
-            closeEditBetModal();
-        } catch (error) {
-            console.error("Erro ao atualizar aposta real: ", error);
-        }
-    }
-
-
-    // Deleta uma Aposta Potencial
-    window.deletePotentialBet = async function(id) {
-        if (!id) return console.error("ID inválido para exclusão");
-        try {
-            await deleteDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/potentialBets`, id));
-            console.log("Aposta potencial deletada!");
-        } catch (error) {
-            console.error("Erro ao deletar aposta potencial: ", error);
-        }
-    }
-
-    // (NOVO) Abre o Modal de Edição de Aposta Potencial
-    window.openEditPotentialModal = function(id) {
-        const bet = allPotentialBets.find(b => b.id === id);
-        if (!bet) {
-            console.error("Aposta potencial não encontrada para editar");
-            return;
-        }
-        editPotentialIdInput.value = id;
-        editPotentialAmountInput.value = bet.amount;
-        editPotentialReturnInput.value = bet.returned_potential;
-        editPotentialModal.classList.remove('hidden');
-    }
-
-    // (NOVO) Fecha o Modal de Edição de Aposta Potencial
-    function closeEditPotentialModal() {
-        editPotentialModal.classList.add('hidden');
-    }
-
-    // (NOVO) Salva as Alterações da Aposta Potencial
-    async function handleSavePotentialChanges(e) {
-        e.preventDefault();
-        const id = editPotentialIdInput.value;
-        const amount = parseFloat(editPotentialAmountInput.value);
-        const returned_potential = parseFloat(editPotentialReturnInput.value);
-        
-        if (!id || isNaN(amount) || isNaN(returned_potential)) return;
-
-        const profit_potential = returned_potential - amount;
-        const updatedData = {
-            amount: amount,
-            returned_potential: returned_potential,
-            profit_potential: profit_potential
-        };
-
-        try {
-            const betDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/potentialBets`, id);
-            await updateDoc(betDocRef, updatedData);
-            console.log("Aposta potencial atualizada!");
-            closeEditPotentialModal();
-        } catch (error) {
-            console.error("Erro ao atualizar aposta potencial: ", error);
-        }
-    }
-
-
-    // Registra o resultado (Green/Red) na Simulação
-    async function recordSimBet(index, resultType) {
-        const tempBet = getTempSimBet(index);
-        if (tempBet.stake <= 0 || tempBet.odd <= 0) return; // Não registra se inválido
-        
-        let targetCollection;
-        if (index === 1) targetCollection = simBets1CollectionRef;
-        else if (index === 2) targetCollection = simBets2CollectionRef;
-        else targetCollection = simBets3CollectionRef;
 
         const newBet = {
-            stake: tempBet.stake,
-            odd: tempBet.odd,
-            result: resultType,
-            profit: (resultType === 'green') ? tempBet.profit : tempBet.loss,
-            createdAt: serverTimestamp()
+            description: description,
+            amount: amount,
+            returned: returned,
+            profit: returned - amount,
+            createdAt: serverTimestamp() // Usa a data do servidor
         };
-        
-        try {
-            await addDoc(targetCollection, newBet);
-            console.log(`Simulação (Est. ${index}) adicionada!`);
-            // Limpa o formulário e reseta
-            document.getElementById(`sim-form-${index}`).reset();
-            calculateSimReturn(index);
-            // O onSnapshot vai cuidar da atualização da UI
-        } catch (error) {
-            console.error(`Erro ao adicionar simulação (Est. ${index}): `, error);
-        }
-    }
 
-    // Deleta uma Simulação
-    window.deleteSimBet = async function(index, id) {
-        if (!id) return console.error("ID inválido para exclusão");
-        
-        let targetCollectionPath;
-        if (index === 1) targetCollectionPath = `simBets1`;
-        else if (index === 2) targetCollectionPath = `simBets2`;
-        else targetCollectionPath = `simBets3`;
-        
-        try {
-            await deleteDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/${targetCollectionPath}`, id));
-            console.log(`Simulação (Est. ${index}) deletada!`);
-            // O onSnapshot vai cuidar da atualização da UI
-        } catch (error) {
-            console.error(`Erro ao deletar simulação (Est. ${index}): `, error);
-        }
-    }
+        addDoc(betsCollectionRef, newBet)
+            .then(() => {
+                console.log("Aposta real adicionada!");
+                betForm.reset(); // Limpa o formulário
+            })
+            .catch(e => console.error("Erro ao adicionar aposta:", e));
+    });
 
-    // (NOVO) Abre o Modal de Edição de Simulação
-    window.openEditSimModal = function(index, id) {
-        const betList = getStrategyBetList(index);
-        const bet = betList.find(b => b.id === id);
-        if (!bet) {
-            console.error("Simulação não encontrada para editar");
+    // Formulário: Adicionar Aposta Potencial
+    potentialBetForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const amount = parseFloat(potentialAmountInput.value);
+        const returned = parseFloat(potentialReturnInput.value);
+
+        if (isNaN(amount) || isNaN(returned)) {
+            alert("Por favor, insira valores numéricos válidos.");
             return;
         }
-        editSimIdInput.value = id;
-        editSimIndexInput.value = index;
-        editSimStakeInput.value = bet.stake;
-        editSimOddInput.value = bet.odd;
-        editSimResultInput.value = bet.result;
-        editSimModal.classList.remove('hidden');
+
+        const newPotentialBet = {
+            amount: amount,
+            returned: returned,
+            profit: returned - amount,
+            createdAt: serverTimestamp()
+        };
+
+        addDoc(potentialBetsCollectionRef, newPotentialBet)
+            .then(() => {
+                console.log("Aposta potencial adicionada!");
+                potentialBetForm.reset();
+            })
+            .catch(e => console.error("Erro ao adicionar aposta potencial:", e));
+    });
+
+    // Formulários de Simulação de Estratégia (1, 2 e 3)
+    setupSimulationForms(userId);
+
+    // Listeners de Edição e Exclusão (usando delegação de eventos)
+    setupEventListeners(userId);
+}
+
+
+// ===================================================================
+// RENDERIZAÇÃO E ATUALIZAÇÃO DA UI
+// ===================================================================
+
+/**
+ * Controla qual "página" (view) é exibida.
+ */
+function showView(viewName) {
+    // Esconde todas as views
+    viewInicio.classList.add('hidden');
+    viewEstrategia.classList.add('hidden');
+    
+    // Remove a classe ativa de todos os links da nav
+    navLinks.forEach(link => {
+        link.classList.remove('text-green-400', 'font-bold');
+        link.classList.add('text-lg', 'font-medium');
+    });
+
+    // Mostra a view e ativa o link correspondente
+    if (viewName === 'inicio') {
+        viewInicio.classList.remove('hidden');
+        navInicio.classList.add('text-green-400', 'font-bold');
+    } else if (viewName === 'estrategia') {
+        viewEstrategia.classList.remove('hidden');
+        navEstrategia.classList.add('text-green-400', 'font-bold');
     }
+}
 
-    // (NOVO) Fecha o Modal de Edição de Simulação
-    function closeEditSimModal() {
-        editSimModal.classList.add('hidden');
+/**
+ * Filtra os dados de apostas (allBets e allPotentialBets) com base no período selecionado.
+ * @param {string} filter - 'all', 'today', 'week', 'month'
+ */
+function applyFilter(filter) {
+    currentFilter = filter;
+    let filteredBets = [];
+    let filteredPotentialBets = [];
+
+    // Define a data de corte
+    let cutoffDate = new Date(0); // Início dos tempos
+    let periodText = "(Período: Tudo)";
+    if (filter === 'today') {
+        cutoffDate = startOfDay;
+        periodText = "(Período: Hoje)";
+    } else if (filter === 'week') {
+        cutoffDate = startOfWeek;
+        periodText = "(Período: Esta Semana)";
+    } else if (filter === 'month') {
+        cutoffDate = startOfMonth;
+        periodText = "(Período: Este Mês)";
     }
+    
+    // Atualiza os textos do período nos cards
+    winningsPeriodEl.textContent = periodText;
+    lossesPeriodEl.textContent = periodText;
 
-    // (NOVO) Salva as Alterações da Simulação
-    async function handleSaveSimChanges(e) {
-        e.preventDefault();
-        const id = editSimIdInput.value;
-        const index = parseInt(editSimIndexInput.value);
-        const stake = parseFloat(editSimStakeInput.value);
-        const odd = parseFloat(editSimOddInput.value);
-        const result = editSimResultInput.value;
+    // Filtra os arrays
+    filteredBets = allBets.filter(bet => bet.createdAt >= cutoffDate);
+    filteredPotentialBets = allPotentialBets.filter(bet => bet.createdAt >= cutoffDate);
 
-        if (!id || !index || isNaN(stake) || isNaN(odd) || !result) return;
+    // Atualiza a UI com os dados filtrados
+    updateDashboard(filteredBets);
+    renderBetHistory(filteredBets); // Tabela de Histórico Real
+    renderPotentialHistory(filteredPotentialBets); // Tabela de Histórico Potencial
+    updateBalanceChart(allBets, initialBalance); // Gráfico 1 (Real) usa *todos* os dados
+    updatePotentialBalanceChart(allBets, allPotentialBets, initialBalance); // Gráfico 2 (Comparativo) usa *todos* os dados
+}
 
-        // Recalcula o lucro
-        const potentialReturn = stake * odd;
-        const profit = (result === 'green') ? (potentialReturn - stake) : -stake;
+/**
+ * Atualiza os cards de resumo (Saldo Total, Ganhos, Perdas).
+ * @param {Array} filteredBets - O array de apostas já filtrado pelo período.
+ */
+function updateDashboard(filteredBets) {
+    // 1. Calcula Ganhos e Perdas (do período filtrado)
+    let periodWinnings = 0;
+    let periodLosses = 0;
+    
+    filteredBets.forEach(bet => {
+        if (bet.profit > 0) {
+            periodWinnings += bet.profit;
+        } else if (bet.profit < 0) {
+            periodLosses += bet.profit; // (bet.profit é negativo)
+        }
+    });
+
+    // 2. Calcula Saldo Total (Banca) (usa *todas* as apostas)
+    const totalProfit = allBets.reduce((acc, bet) => acc + bet.profit, 0);
+    const totalBalance = initialBalance + totalProfit;
+
+    // 3. Atualiza o HTML
+    totalBalanceEl.textContent = formatCurrency(totalBalance);
+    totalWinningsEl.textContent = formatCurrency(periodWinnings);
+    totalLossesEl.textContent = formatCurrency(periodLosses);
+    
+    // Define a cor do saldo total
+    totalBalanceEl.classList.toggle('text-green-800', totalBalance >= initialBalance);
+    totalBalanceEl.classList.toggle('text-red-800', totalBalance < initialBalance);
+    totalBalanceEl.classList.toggle('text-blue-800', totalBalance === initialBalance && totalProfit === 0);
+}
+
+/**
+ * Renderiza a tabela "Histórico de Apostas (Real)".
+ * @param {Array} filteredBets - O array de apostas já filtrado pelo período.
+ */
+function renderBetHistory(filteredBets) {
+    historyBody.innerHTML = ''; // Limpa a tabela
+
+    if (filteredBets.length === 0) {
+        emptyRow.classList.remove('hidden');
+        return;
+    }
+    
+    emptyRow.classList.add('hidden');
+
+    filteredBets.forEach(bet => {
+        const row = document.createElement('tr');
+        row.className = 'fade-in';
         
+        const profitColor = bet.profit > 0 ? 'text-green-600' : (bet.profit < 0 ? 'text-red-600' : 'text-gray-700');
+        const profitSign = bet.profit > 0 ? '+' : '';
+
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                ${bet.description}
+                <span class="block text-xs text-gray-500">${formatDate(bet.createdAt)}</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.amount)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.returned)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold ${profitColor}">
+                ${profitSign}${formatCurrency(bet.profit)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button class="edit-bet-btn text-blue-600 hover:text-blue-900" data-id="${bet.id}">
+                    <ion-icon name="create-outline" class="text-lg"></ion-icon>
+                </button>
+                <button class="delete-bet-btn text-red-600 hover:text-red-900 ml-2" data-id="${bet.id}">
+                    <ion-icon name="trash-outline" class="text-lg"></ion-icon>
+                </button>
+            </td>
+        `;
+        historyBody.appendChild(row);
+    });
+}
+
+/**
+ * Renderiza a tabela "Histórico de Simulações (Potencial)".
+ * @param {Array} filteredPotentialBets - O array de apostas potenciais já filtrado.
+ */
+function renderPotentialHistory(filteredPotentialBets) {
+    potentialHistoryBody.innerHTML = ''; // Limpa a tabela
+
+    if (filteredPotentialBets.length === 0) {
+        emptyPotentialRow.classList.remove('hidden');
+        return;
+    }
+    
+    emptyPotentialRow.classList.add('hidden');
+
+    filteredPotentialBets.forEach(bet => {
+        const row = document.createElement('tr');
+        row.className = 'fade-in';
+        
+        const profitColor = bet.profit > 0 ? 'text-green-600' : (bet.profit < 0 ? 'text-red-600' : 'text-gray-700');
+        const profitSign = bet.profit > 0 ? '+' : '';
+
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${formatDate(bet.createdAt)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.amount)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.returned)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold ${profitColor}">
+                ${profitSign}${formatCurrency(bet.profit)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button class="edit-potential-btn text-blue-600 hover:text-blue-900" data-id="${bet.id}">
+                    <ion-icon name="create-outline" class="text-lg"></ion-icon>
+                </button>
+                <button class="delete-potential-btn text-red-600 hover:text-red-900 ml-2" data-id="${bet.id}">
+                    <ion-icon name="trash-outline" class="text-lg"></ion-icon>
+                </button>
+            </td>
+        `;
+        potentialHistoryBody.appendChild(row);
+    });
+}
+
+/**
+ * Atualiza o Gráfico 1: Evolução da Banca (Real).
+ * @param {Array} allBets - Array com *todas* as apostas reais.
+ * @param {number} startBalance - O saldo inicial.
+ */
+function updateBalanceChart(allBets, startBalance) {
+    // Ordena as apostas da mais antiga para a mais nova para o gráfico
+    const sortedBets = [...allBets].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+    const labels = ['Início'];
+    const dataPoints = [startBalance];
+    let currentBalance = startBalance;
+
+    sortedBets.forEach((bet, index) => {
+        currentBalance += bet.profit;
+        labels.push(`Aposta ${index + 1}`);
+        dataPoints.push(currentBalance);
+    });
+
+    // Destrói o gráfico antigo se ele existir (para evitar sobreposição)
+    if (balanceChart) {
+        balanceChart.destroy();
+    }
+
+    // Cria o novo gráfico
+    balanceChart = new Chart(balanceChartCtx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Saldo Real (Banca)',
+                data: dataPoints,
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                borderColor: 'rgba(22, 163, 74, 1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.1,
+                pointBackgroundColor: 'rgba(22, 163, 74, 1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        // Formata o eixo Y como R$
+                        callback: (value) => formatCurrency(value)
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: (context) => `Saldo: ${formatCurrency(context.parsed.y)}`
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Atualiza o Gráfico 2: Comparativo (Real vs. Potencial).
+ * @param {Array} allBets - *Todas* as apostas reais.
+ * @param {Array} allPotentialBets - *Todas* as apostas potenciais.
+ * @param {number} startBalance - O saldo inicial.
+ */
+function updatePotentialBalanceChart(allBets, allPotentialBets, startBalance) {
+    // Ordena ambos os arrays por data (mais antigo primeiro)
+    const sortedRealBets = [...allBets].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const sortedPotentialBets = [...allPotentialBets].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+    // Calcula os data points para o Saldo Real (idêntico ao Gráfico 1)
+    const realDataPoints = [startBalance];
+    let currentRealBalance = startBalance;
+    sortedRealBets.forEach(bet => {
+        currentRealBalance += bet.profit;
+        realDataPoints.push(currentRealBalance);
+    });
+
+    // Calcula os data points para o Saldo Potencial
+    const potentialDataPoints = [startBalance];
+    let currentPotentialBalance = startBalance;
+    sortedPotentialBets.forEach(bet => {
+        currentPotentialBalance += bet.profit;
+        potentialDataPoints.push(currentPotentialBalance);
+    });
+
+    // Garante que ambos os datasets tenham o mesmo comprimento para o gráfico
+    const maxLen = Math.max(realDataPoints.length, potentialDataPoints.length);
+    // Preenche o array menor com o último valor
+    while (realDataPoints.length < maxLen) {
+        realDataPoints.push(realDataPoints[realDataPoints.length - 1]);
+    }
+    while (potentialDataPoints.length < maxLen) {
+        potentialDataPoints.push(potentialDataPoints[potentialDataPoints.length - 1]);
+    }
+
+    // Cria as labels (Aposta 1, Aposta 2...)
+    const labels = ['Início'];
+    for (let i = 1; i < maxLen; i++) {
+        labels.push(`Aposta ${i}`);
+    }
+
+    // Destrói o gráfico antigo se ele existir
+    if (potentialBalanceChart) {
+        potentialBalanceChart.destroy();
+    }
+
+    // Cria o novo gráfico
+    potentialBalanceChart = new Chart(potentialChartCtx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Saldo Real (Cashout)',
+                    data: realDataPoints,
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderColor: 'rgba(37, 99, 235, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1,
+                    pointBackgroundColor: 'rgba(37, 99, 235, 1)'
+                },
+                {
+                    label: 'Saldo Potencial (Até o Fim)',
+                    data: potentialDataPoints,
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderColor: 'rgba(5, 150, 105, 1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1,
+                    pointBackgroundColor: 'rgba(5, 150, 105, 1)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: (value) => formatCurrency(value)
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: (context) => `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`
+                    }
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Configura os formulários de simulação de estratégia (cálculo de retorno, botões).
+ */
+function setupSimulationForms(userId) {
+    const simCollections = [simBets1CollectionRef, simBets2CollectionRef, simBets3CollectionRef];
+
+    // Itera sobre as 3 estratégias
+    [1, 2, 3].forEach(id => {
+        const form = document.getElementById(`sim-form-${id}`);
+        const stakeInput = document.getElementById(`sim-stake-${id}`);
+        const oddInput = document.getElementById(`sim-odd-${id}`);
+        const returnEl = document.getElementById(`sim-return-${id}`);
+        const greenBtn = form.querySelector('[data-result="green"]');
+        const redBtn = form.querySelector('[data-result="red"]');
+        const simCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/simBets${id}`);
+
+        let stake = 0, odd = 0, potentialReturn = 0;
+
+        // Função para calcular o retorno
+        const calculateReturn = () => {
+            stake = parseFloat(stakeInput.value) || 0;
+            odd = parseFloat(oddInput.value) || 0;
+            potentialReturn = stake * odd;
+            returnEl.textContent = formatCurrency(potentialReturn);
+
+            // Habilita/Desabilita botões
+            const isValid = stake > 0 && odd > 0;
+            greenBtn.disabled = !isValid;
+            redBtn.disabled = !isValid;
+        };
+
+        // Calcula ao digitar
+        stakeInput.addEventListener('input', calculateReturn);
+        oddInput.addEventListener('input', calculateReturn);
+
+        // Submissão do formulário (clique no Green ou Red)
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const resultType = e.submitter.dataset.result; // 'green' ou 'red'
+            
+            calculateReturn(); // Garante que os valores estão atualizados
+            if (stake <= 0 || odd <= 0) return; // Não faz nada se inválido
+
+            let profit = 0;
+            if (resultType === 'green') {
+                profit = potentialReturn - stake; // Lucro
+            } else {
+                profit = -stake; // Perda
+            }
+
+            const newSimBet = {
+                stake: stake,
+                odd: odd,
+                profit: profit,
+                result: resultType,
+                createdAt: serverTimestamp()
+            };
+
+            addDoc(simCollectionRef, newSimBet)
+                .then(() => {
+                    console.log(`Simulação ${id} adicionada!`);
+                    form.reset();
+                    returnEl.textContent = formatCurrency(0); // Reseta o retorno
+                    greenBtn.disabled = true;
+                    redBtn.disabled = true;
+                })
+                .catch(e => console.error(`Erro ao adicionar simulação ${id}:`, e));
+        });
+    });
+}
+
+/**
+ * Renderiza o conteúdo de uma coluna de simulação (lucro, gráfico, tabela).
+ * @param {number} id - O ID da estratégia (1, 2 ou 3).
+ */
+function renderStrategySimulation(id) {
+    let betsArray = [];
+    if (id === 1) betsArray = strategy1Bets;
+    else if (id === 2) betsArray = strategy2Bets;
+    else if (id === 3) betsArray = strategy3Bets;
+
+    const profitEl = document.getElementById(`sim-profit-${id}`);
+    const historyBody = document.getElementById(`sim-history-${id}`);
+    const chartCtx = document.getElementById(`sim-chart-${id}`).getContext('2d');
+    let chartInstance = null;
+    if (id === 1) chartInstance = simChart1;
+    else if (id === 2) chartInstance = simChart2;
+    else if (id === 3) chartInstance = simChart3;
+
+    // 1. Calcula Lucro Total
+    const totalProfit = betsArray.reduce((acc, bet) => acc + bet.profit, 0);
+    profitEl.textContent = formatCurrency(totalProfit);
+    profitEl.className = totalProfit > 0 ? 'font-bold text-green-700' : (totalProfit < 0 ? 'font-bold text-red-700' : 'font-bold text-gray-800');
+
+    // 2. Renderiza Tabela de Histórico
+    historyBody.innerHTML = ''; // Limpa
+    // Ordena do mais novo para o mais antigo (o array já vem ordenado do onSnapshot)
+    betsArray.forEach(bet => {
+        const row = document.createElement('tr');
+        const profitColor = bet.profit > 0 ? 'text-green-600' : 'text-red-600';
+        const resultText = bet.result === 'green' ? 'Green' : 'Red';
+        const profitSign = bet.profit > 0 ? '+' : '';
+        row.className = 'fade-in';
+
+        row.innerHTML = `
+            <td class="px-4 py-2 whitespace-nowrap text-sm font-semibold ${profitColor}">${resultText}</td>
+            <td class="px-4 py-2 whitespace-nowrap text-sm ${profitColor}">${profitSign}${formatCurrency(bet.profit)}</td>
+            <td class="px-4 py-2 whitespace-nowrap text-right text-sm">
+                <button class="edit-sim-btn text-blue-600 hover:text-blue-900" data-id="${bet.id}" data-strategy-id="${id}">
+                    <ion-icon name="create-outline" class="text-xs"></ion-icon>
+                </button>
+                <button class="delete-sim-btn text-red-600 hover:text-red-900 ml-1" data-id="${bet.id}" data-strategy-id="${id}">
+                    <ion-icon name="trash-outline" class="text-xs"></ion-icon>
+                </button>
+            </td>
+        `;
+        historyBody.appendChild(row);
+    });
+
+    // 3. Renderiza Gráfico
+    // Ordena do mais antigo para o mais novo para o gráfico
+    const sortedBets = [...betsArray].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const labels = ['Início'];
+    const dataPoints = [0]; // Começa com 0
+    let currentProfit = 0;
+    sortedBets.forEach((bet, index) => {
+        currentProfit += bet.profit;
+        labels.push(`#${index + 1}`);
+        dataPoints.push(currentProfit);
+    });
+
+    if (chartInstance) {
+        chartInstance.destroy(); // Destrói o antigo
+    }
+
+    const newChart = new Chart(chartCtx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Lucro Acumulado',
+                data: dataPoints,
+                borderColor: id === 1 ? '#10B981' : (id === 2 ? '#3B82F6' : '#84CC16'), // Cores diferentes
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // Permite que o gráfico seja menor
+            height: 150, // Altura fixa
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: (value) => formatCurrency(value),
+                        font: { size: 10 }
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: { size: 10 }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false // Esconde a legenda
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => `Lucro: ${formatCurrency(context.parsed.y)}`
+                    }
+                }
+            }
+        }
+    });
+
+    // Armazena a nova instância do gráfico
+    if (id === 1) simChart1 = newChart;
+    else if (id === 2) simChart2 = newChart;
+    else if (id === 3) simChart3 = newChart;
+}
+
+
+// ===================================================================
+// LÓGICA DE EDIÇÃO E EXCLUSÃO
+// ===================================================================
+
+/**
+ * Configura todos os event listeners para botões (delegação de eventos).
+ */
+function setupEventListeners(userId) {
+    // Referências das coleções (para exclusão/edição)
+    const collections = {
+        bets: collection(db, `artifacts/${appId}/users/${userId}/bets`),
+        potentialBets: collection(db, `artifacts/${appId}/users/${userId}/potentialBets`),
+        simBets1: collection(db, `artifacts/${appId}/users/${userId}/simBets1`),
+        simBets2: collection(db, `artifacts/${appId}/users/${userId}/simBets2`),
+        simBets3: collection(db, `artifacts/${appId}/users/${userId}/simBets3`),
+    };
+
+    // Listener principal para cliques na área de conteúdo
+    document.getElementById('content-area').addEventListener('click', (e) => {
+        // Encontra o botão mais próximo que foi clicado (para delegação)
+        const button = e.target.closest('button');
+        if (!button) return; // Sai se não foi um clique em um botão
+
+        // --- LÓGICA DE EXCLUSÃO ---
+        if (button.classList.contains('delete-bet-btn')) {
+            handleDelete(button.dataset.id, collections.bets, "Aposta Real");
+        }
+        if (button.classList.contains('delete-potential-btn')) {
+            handleDelete(button.dataset.id, collections.potentialBets, "Aposta Potencial");
+        }
+        if (button.classList.contains('delete-sim-btn')) {
+            const strategyId = button.dataset.strategyId;
+            const simCollection = collections[`simBets${strategyId}`];
+            handleDelete(button.dataset.id, simCollection, `Simulação ${strategyId}`);
+        }
+
+        // --- LÓGICA DE EDIÇÃO (ABRIR MODAL) ---
+        if (button.classList.contains('edit-bet-btn')) {
+            const bet = allBets.find(b => b.id === button.dataset.id);
+            if (bet) openEditBetModal(bet);
+        }
+        if (button.classList.contains('edit-potential-btn')) {
+            const bet = allPotentialBets.find(b => b.id === button.dataset.id);
+            if (bet) openEditPotentialModal(bet);
+        }
+        if (button.classList.contains('edit-sim-btn')) {
+            const strategyId = button.dataset.strategyId;
+            const betsArray = [0, strategy1Bets, strategy2Bets, strategy3Bets][strategyId];
+            const bet = betsArray.find(b => b.id === button.dataset.id);
+            if (bet) openEditSimModal(bet, strategyId);
+        }
+    });
+
+    // --- Listeners para FECHAR Modais ---
+    modalBackdrop.addEventListener('click', closeAllModals);
+    cancelEditBetBtn.addEventListener('click', closeAllModals);
+    cancelEditPotentialBtn.addEventListener('click', closeAllModals);
+    cancelEditSimBtn.addEventListener('click', closeAllModals);
+
+    // --- Listeners para SALVAR Modais ---
+    editBetForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-bet-id').value;
+        const description = document.getElementById('edit-bet-description').value || 'Aposta';
+        const amount = parseFloat(document.getElementById('edit-bet-amount').value);
+        const returned = parseFloat(document.getElementById('edit-return-amount').value);
+        
+        if (isNaN(amount) || isNaN(returned)) return alert("Valores inválidos.");
+
+        const updatedData = {
+            description: description,
+            amount: amount,
+            returned: returned,
+            profit: returned - amount
+        };
+        
+        const docRef = doc(collections.bets, id);
+        updateDoc(docRef, updatedData)
+            .then(() => closeAllModals())
+            .catch(e => console.error("Erro ao atualizar aposta real:", e));
+    });
+
+    editPotentialForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-potential-id').value;
+        const amount = parseFloat(document.getElementById('edit-potential-bet-amount').value);
+        const returned = parseFloat(document.getElementById('edit-potential-return-amount').value);
+
+        if (isNaN(amount) || isNaN(returned)) return alert("Valores inválidos.");
+
+        const updatedData = {
+            amount: amount,
+            returned: returned,
+            profit: returned - amount
+        };
+
+        const docRef = doc(collections.potentialBets, id);
+        updateDoc(docRef, updatedData)
+            .then(() => closeAllModals())
+            .catch(e => console.error("Erro ao atualizar aposta potencial:", e));
+    });
+
+    editSimForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-sim-id').value;
+        const strategyId = document.getElementById('edit-sim-strategy-id').value;
+        const stake = parseFloat(document.getElementById('edit-sim-stake').value);
+        const odd = parseFloat(document.getElementById('edit-sim-odd').value);
+        const result = document.querySelector('input[name="edit-sim-result"]:checked').value;
+        
+        if (isNaN(stake) || isNaN(odd)) return alert("Valores inválidos.");
+
+        let profit = 0;
+        if (result === 'green') {
+            profit = (stake * odd) - stake;
+        } else {
+            profit = -stake;
+        }
+
         const updatedData = {
             stake: stake,
             odd: odd,
             result: result,
             profit: profit
         };
-
-        let targetCollectionPath;
-        if (index === 1) targetCollectionPath = `simBets1`;
-        else if (index === 2) targetCollectionPath = `simBets2`;
-        else targetCollectionPath = `simBets3`;
-
-        try {
-            const simDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/${targetCollectionPath}`, id);
-            await updateDoc(simDocRef, updatedData);
-            console.log(`Simulação (Est. ${index}) atualizada!`);
-            closeEditSimModal();
-        } catch (error) {
-            console.error(`Erro ao atualizar simulação (Est. ${index}): `, error);
-        }
-    }
-
-
-    // --- EVENT LISTENERS (Formulários, Filtros, etc) ---
-    // (O onSnapshot já lida com a atualização dos dados,
-    // então os event listeners agora apenas *enviam* dados para o Firebase)
-    initialBalanceInput.addEventListener('blur', saveInitialBalance);
-    betForm.addEventListener('submit', addBet);
-    potentialBetForm.addEventListener('submit', addPotentialBet);
-
-    // (NOVOS) Listeners dos Modais
-    editBetForm.addEventListener('submit', handleSaveBetChanges);
-    cancelEditBetBtn.addEventListener('click', closeEditBetModal);
-    editPotentialForm.addEventListener('submit', handleSavePotentialChanges);
-    cancelEditPotentialBtn.addEventListener('click', closeEditPotentialModal);
-    editSimForm.addEventListener('submit', handleSaveSimChanges);
-    cancelEditSimBtn.addEventListener('click', closeEditSimModal);
-
-
-    filterAllBtn.addEventListener('click', () => applyFilter('all'));
-    filterTodayBtn.addEventListener('click', () => applyFilter('today'));
-    filterWeekBtn.addEventListener('click', () => applyFilter('week'));
-    filterMonthBtn.addEventListener('click', () => applyFilter('month'));
-
-    // Estratégia 1
-    document.getElementById('sim-stake-1').addEventListener('input', () => calculateSimReturn(1));
-    document.getElementById('sim-odd-1').addEventListener('input', () => calculateSimReturn(1));
-    document.getElementById('sim-green-1').addEventListener('click', () => recordSimBet(1, 'green'));
-    document.getElementById('sim-red-1').addEventListener('click', () => recordSimBet(1, 'red'));
-    
-    // Estratégia 2
-    document.getElementById('sim-stake-2').addEventListener('input', () => calculateSimReturn(2));
-    document.getElementById('sim-odd-2').addEventListener('input', () => calculateSimReturn(2));
-    document.getElementById('sim-green-2').addEventListener('click', () => recordSimBet(2, 'green'));
-    document.getElementById('sim-red-2').addEventListener('click', () => recordSimBet(2, 'red'));
-    
-    // Estratégia 3
-    document.getElementById('sim-stake-3').addEventListener('input', () => calculateSimReturn(3));
-    document.getElementById('sim-odd-3').addEventListener('input', () => calculateSimReturn(3));
-    document.getElementById('sim-green-3').addEventListener('click', () => recordSimBet(3, 'green'));
-    document.getElementById('sim-red-3').addEventListener('click', () => recordSimBet(3, 'red'));
-
-    
-    // --- FUNÇÕES DE RENDERIZAÇÃO (Quase inalteradas, mas agora usam 'allBets' global) ---
-    
-    function showView(viewId) {
-        viewInicio.classList.add('hidden');
-        viewEstrategia.classList.add('hidden');
-        navLinks.forEach(link => {
-            link.classList.remove('text-green-400', 'font-bold');
-            link.classList.add('text-gray-300', 'hover:text-white');
-        });
         
-        if (viewId === 'inicio') {
-            viewInicio.classList.remove('hidden');
-            navInicio.classList.add('text-green-400', 'font-bold');
-            navInicio.classList.remove('text-gray-300', 'hover:text-white');
-            // Re-renderiza gráficos principais ao mostrar a view
-            renderBalanceChart();
-            renderPotentialChart();
-        } else if (viewId === 'estrategia') {
-            viewEstrategia.classList.remove('hidden');
-            navEstrategia.classList.add('text-green-400', 'font-bold');
-            navEstrategia.classList.remove('text-gray-300', 'hover:text-white');
-            // Re-renderiza gráficos de simulação ao mostrar a view
-            renderStrategySimulation(1);
-            renderStrategySimulation(2);
-            renderStrategySimulation(3);
-        }
-    }
+        const simCollection = collections[`simBets${strategyId}`];
+        const docRef = doc(simCollection, id);
+        updateDoc(docRef, updatedData)
+            .then(() => closeAllModals())
+            .catch(e => console.error("Erro ao atualizar simulação:", e));
+    });
+}
 
-    function formatCurrency(value) {
-        const isNegative = value < 0;
-        const formatted = Math.abs(value).toLocaleString('pt-BR', {
-            style: 'currency',
-            currency: 'BRL'
-        });
-        return isNegative ? `-${formatted}` : formatted;
+/**
+ * Função genérica para exclusão de documentos.
+ */
+function handleDelete(id, collectionRef, itemName) {
+    if (confirm(`Tem certeza que deseja excluir este item: ${itemName}?`)) {
+        const docRef = doc(collectionRef, id);
+        deleteDoc(docRef)
+            .then(() => {
+                console.log(`${itemName} excluído com sucesso.`);
+            })
+            .catch(e => console.error(`Erro ao excluir ${itemName}:`, e));
     }
+}
 
-    function getFilterStartDate(filterType) {
-        switch (filterType) {
-            case 'today': return startOfDay;
-            case 'week': return startOfWeek;
-            case 'month': return startOfMonth;
-            default: return new Date(0); // Epoch start (inclui tudo)
-        }
+// --- Funções para ABRIR Modais ---
+function openEditBetModal(bet) {
+    document.getElementById('edit-bet-id').value = bet.id;
+    document.getElementById('edit-bet-description').value = bet.description;
+    document.getElementById('edit-bet-amount').value = bet.amount.toFixed(2);
+    document.getElementById('edit-return-amount').value = bet.returned.toFixed(2);
+    modalBackdrop.classList.remove('hidden');
+    editBetModal.classList.remove('hidden');
+}
+
+function openEditPotentialModal(bet) {
+    document.getElementById('edit-potential-id').value = bet.id;
+    document.getElementById('edit-potential-bet-amount').value = bet.amount.toFixed(2);
+    document.getElementById('edit-potential-return-amount').value = bet.returned.toFixed(2);
+    modalBackdrop.classList.remove('hidden');
+    editPotentialModal.classList.remove('hidden');
+}
+
+function openEditSimModal(bet, strategyId) {
+    document.getElementById('edit-sim-id').value = bet.id;
+    document.getElementById('edit-sim-strategy-id').value = strategyId;
+    document.getElementById('edit-sim-stake').value = bet.stake.toFixed(2);
+    document.getElementById('edit-sim-odd').value = bet.odd.toFixed(2);
+    
+    if (bet.result === 'green') {
+        document.getElementById('edit-sim-green').checked = true;
+    } else {
+        document.getElementById('edit-sim-red').checked = true;
     }
     
-    function getProfitClass(value) {
-        return value > 0 ? 'text-green-600' : (value < 0 ? 'text-red-600' : 'text-gray-500');
+    modalBackdrop.classList.remove('hidden');
+    editSimModal.classList.remove('hidden');
+}
+
+// --- Função para FECHAR Modais ---
+function closeAllModals() {
+    modalBackdrop.classList.add('hidden');
+    editBetModal.classList.add('hidden');
+    editPotentialModal.classList.add('hidden');
+    editSimModal.classList.add('hidden');
+}
+
+// ===================================================================
+// FUNÇÕES UTILITÁRIAS
+// ===================================================================
+
+/**
+ * Formata um número como moeda brasileira (R$).
+ * @param {number} value - O valor numérico.
+ * @returns {string} - O valor formatado.
+ */
+function formatCurrency(value) {
+    return value.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    });
+}
+
+/**
+ * Formata um objeto Date para uma string legível (ex: 05/08/2024, 14:30).
+ * @param {Date} date - O objeto Date.
+ * @returns {string} - A data formatada.
+ */
+function formatDate(date) {
+    if (!(date instanceof Date) || isNaN(date)) {
+        return "Data inválida";
     }
-
-    function applyFilter(filterType) {
-        currentFilter = filterType;
-        
-        const filterStartDate = getFilterStartDate(currentFilter);
-
-        // Filtra os dados (que já foram carregados pelo onSnapshot)
-        // **IMPORTANTE**: Agora filtramos por `bet.createdAt` (que é um objeto Date)
-        filteredBets = allBets.filter(bet => bet.createdAt >= filterStartDate);
-        filteredPotentialBets = allPotentialBets.filter(bet => bet.createdAt >= filterStartDate);
-        
-        updateFilterButtons();
-        updateSummary();
-        renderHistory();
-        renderPotentialHistory();
-        renderBalanceChart(); // Gráfico 1 (Real)
-        renderPotentialChart(); // Gráfico 2 (Comparativo)
-    }
-
-    function updateFilterButtons() {
-        const periodTextMap = {
-            'all': '(Período: Tudo)', 'today': '(Período: Hoje)',
-            'week': '(Período: Esta Semana)', 'month': '(Período: Este Mês)',
-        };
-        if (winningsPeriodEl) winningsPeriodEl.textContent = periodTextMap[currentFilter];
-        if (lossesPeriodEl) lossesPeriodEl.textContent = periodTextMap[currentFilter];
-
-        filterButtons.forEach(btn => {
-            if(btn) {
-                btn.classList.remove('bg-green-600', 'text-white');
-                btn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-            }
-        });
-        
-        let activeBtn;
-        if (currentFilter === 'today') activeBtn = filterTodayBtn;
-        else if (currentFilter === 'week') activeBtn = filterWeekBtn;
-        else if (currentFilter === 'month') activeBtn = filterMonthBtn;
-        else activeBtn = filterAllBtn;
-        
-        if(activeBtn) {
-            activeBtn.classList.add('bg-green-600', 'text-white');
-            activeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
-        }
-    }
-
-    function updateSummary() {
-        // Usa 'filteredBets' (baseado no período)
-        let filteredWinnings = 0, filteredLosses = 0;
-        filteredBets.forEach(bet => {
-            if (bet.profit_actual > 0) filteredWinnings += bet.profit_actual;
-            else filteredLosses += bet.profit_actual;
-        });
-        totalWinningsEl.textContent = formatCurrency(filteredWinnings);
-        totalLossesEl.textContent = formatCurrency(filteredLosses);
-
-        // Usa 'allBets' (completo) para o saldo total
-        let totalProfitLoss = 0;
-        allBets.forEach(bet => { totalProfitLoss += bet.profit_actual; });
-        const totalBalance = initialBalance + totalProfitLoss;
-        totalBalanceEl.textContent = formatCurrency(totalBalance);
-
-        totalBalanceEl.classList.remove('text-green-800', 'text-red-800', 'text-blue-800');
-        if (totalBalance > initialBalance) totalBalanceEl.classList.add('text-green-800');
-        else if (totalBalance < initialBalance) totalBalanceEl.classList.add('text-red-800');
-        else totalBalanceEl.classList.add('text-blue-800');
-    }
-
-    function renderHistory() {
-        historyBody.innerHTML = '';
-        if (filteredBets.length === 0) {
-            emptyRow.style.display = 'table-row';
-        } else {
-            emptyRow.style.display = 'none';
-            // Os dados já vêm ordenados do onSnapshot (desc)
-            filteredBets.forEach(bet => {
-                const row = document.createElement('tr');
-                row.classList.add('fade-in');
-                const profitClassActual = getProfitClass(bet.profit_actual);
-                // **IMPORTANTE**: onclick agora usa `bet.id` (string)
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">${bet.description || 'Aposta'}</div>
-                        <div class="text-xs text-gray-500">${bet.createdAt.toLocaleString('pt-BR')}</div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.amount)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.returned_actual)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${profitClassActual}">${formatCurrency(bet.profit_actual)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="openEditBetModal('${bet.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Editar Aposta">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" />
-                            </svg>
-                        </button>
-                        <button onclick="deleteBet('${bet.id}')" class="text-red-500 hover:text-red-700 inline-flex" title="Excluir Aposta">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
-                    </td>
-                `;
-                historyBody.appendChild(row);
-            });
-        }
-    }
-    
-    function renderPotentialHistory() {
-        potentialHistoryBody.innerHTML = '';
-        if (filteredPotentialBets.length === 0) {
-            emptyPotentialRow.style.display = 'table-row';
-        } else {
-            emptyPotentialRow.style.display = 'none';
-            // Os dados já vêm ordenados do onSnapshot (desc)
-            filteredPotentialBets.forEach(bet => {
-                const row = document.createElement('tr');
-                row.classList.add('fade-in');
-                const profitClassPotential = getProfitClass(bet.profit_potential);
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${bet.createdAt.toLocaleString('pt-BR')}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.amount)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.returned_potential)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${profitClassPotential}">${formatCurrency(bet.profit_potential)}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button onclick="openEditPotentialModal('${bet.id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Editar Simulação">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" />
-                            </svg>
-                        </button>
-                        <button onclick="deletePotentialBet('${bet.id}')" class="text-red-500 hover:text-red-700 inline-flex" title="Excluir Simulação">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
-                    </td>
-                `;
-                potentialHistoryBody.appendChild(row);
-            });
-        }
-    }
-    
-    function renderBalanceChart() {
-        if (balanceChart) balanceChart.destroy();
-        
-        const filterStartDate = getFilterStartDate(currentFilter);
-        
-        // Calcula o saldo antes do período do filtro
-        let balanceBeforeFilter = initialBalance;
-        allBets.forEach(bet => {
-            if (bet.createdAt < filterStartDate) {
-                balanceBeforeFilter += bet.profit_actual;
-            }
-        });
-        
-        // Filtra as apostas *dentro* do período e reverte (para o gráfico)
-        const reversedFilteredBets = [...allBets.filter(bet => bet.createdAt >= filterStartDate)].reverse();
-        
-        const labels = ['Início do Período'];
-        const data = [balanceBeforeFilter];
-        let currentBalance = balanceBeforeFilter;
-        
-        reversedFilteredBets.forEach((bet) => {
-            currentBalance += bet.profit_actual;
-            labels.push(`Aposta (${bet.createdAt.toLocaleDateString('pt-BR')})`);
-            data.push(currentBalance);
-        });
-        
-        if (reversedFilteredBets.length === 0) {
-             labels.push('Fim do Período');
-             data.push(balanceBeforeFilter);
-        }
-        
-        balanceChart = new Chart(balanceChartCtx, { 
-            type: 'line', data: { labels: labels,
-                datasets: [{ label: 'Evolução da Banca (Real)', data: data,
-                    borderColor: (context) => {
-                        const finalBalance = data[data.length - 1] || balanceBeforeFilter;
-                        if(finalBalance > data[0]) return 'rgb(22, 163, 74)';
-                        if(finalBalance < data[0]) return 'rgb(220, 38, 38)';
-                        return 'rgb(37, 99, 235)';
-                    },
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)', fill: true, tension: 0.1, pointRadius: 4, pointBackgroundColor: 'rgb(255, 255, 255)'
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: true,
-                scales: { y: { beginAtZero: false, ticks: { callback: (value) => formatCurrency(value) } }, x: { ticks: { autoSkip: true, maxTicksLimit: 10 } } },
-                plugins: { tooltip: { callbacks: { label: (context) => `${context.dataset.label || ''}: ${formatCurrency(context.parsed.y)}` } } }
-            }
-        });
-    }
-    
-    function renderPotentialChart() {
-        if (potentialBalanceChart) potentialBalanceChart.destroy();
-        
-        const filterStartDate = getFilterStartDate(currentFilter);
-        
-        // Linha "Real"
-        let balanceBeforeFilter_Actual = initialBalance;
-        allBets.forEach(bet => {
-            if (bet.createdAt < filterStartDate) balanceBeforeFilter_Actual += bet.profit_actual;
-        });
-        const reversedFilteredBets = [...allBets.filter(bet => bet.createdAt >= filterStartDate)].reverse();
-        const data_actual = [balanceBeforeFilter_Actual];
-        let currentBalance_Actual = balanceBeforeFilter_Actual;
-
-        // Linha "Potencial"
-        let balanceBeforeFilter_Potential = initialBalance;
-        allPotentialBets.forEach(bet => {
-            if (bet.createdAt < filterStartDate) balanceBeforeFilter_Potential += bet.profit_potential;
-        });
-        const reversedFilteredPotentialBets = [...allPotentialBets.filter(bet => bet.createdAt >= filterStartDate)].reverse();
-        const data_potential = [balanceBeforeFilter_Potential];
-        let currentBalance_Potential = balanceBeforeFilter_Potential;
-
-        const maxLen = Math.max(reversedFilteredBets.length, reversedFilteredPotentialBets.length);
-        const labels = ['Início do Período'];
-        
-        for (let i = 0; i < maxLen; i++) {
-            labels.push(`Evento #${i + 1}`);
-            if (reversedFilteredBets[i]) {
-                currentBalance_Actual += reversedFilteredBets[i].profit_actual;
-            }
-            data_actual.push(currentBalance_Actual);
-            
-            if (reversedFilteredPotentialBets[i]) {
-                currentBalance_Potential += reversedFilteredPotentialBets[i].profit_potential;
-            }
-            data_potential.push(currentBalance_Potential);
-        }
-
-        potentialBalanceChart = new Chart(potentialChartCtx, {
-            type: 'line', data: { labels: labels,
-                datasets: [
-                    { label: 'Saldo Real (Cashout)', data: data_actual, borderColor: 'rgb(37, 99, 235)', backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                        fill: false, tension: 0.1, pointRadius: 4, pointBackgroundColor: 'rgb(255, 255, 255)' },
-                    { label: 'Saldo Potencial (Simulado)', data: data_potential, borderColor: 'rgb(22, 163, 74)', backgroundColor: 'rgba(22, 163, 74, 0.1)',
-                        fill: false, tension: 0.1, pointRadius: 4, pointBackgroundColor: 'rgb(255, 255, 255)' }
-                ]
-            },
-            options: { responsive: true, maintainAspectRatio: true,
-                scales: { y: { beginAtZero: false, ticks: { callback: (value) => formatCurrency(value) } }, x: { ticks: { autoSkip: true, maxTicksLimit: 10 } } },
-                plugins: { tooltip: { callbacks: { label: (context) => `${context.dataset.label || ''}: ${formatCurrency(context.parsed.y)}` } } }
-            }
-        });
-    }
-
-
-    // --- LÓGICA: SIMULAÇÃO DE ESTRATÉGIA (Quase inalterada) ---
-    
-    // Estado temporário (para os formulários)
-    let tempSimBet1 = { stake: 0, odd: 0, profit: 0, loss: 0 };
-    let tempSimBet2 = { stake: 0, odd: 0, profit: 0, loss: 0 };
-    let tempSimBet3 = { stake: 0, odd: 0, profit: 0, loss: 0 };
-
-    function getStrategyBetList(index) {
-        if (index === 1) return strategy1Bets;
-        if (index === 2) return strategy2Bets;
-        if (index === 3) return strategy3Bets;
-    }
-    
-    function getTempSimBet(index) {
-        if (index === 1) return tempSimBet1;
-        if (index === 2) return tempSimBet2;
-        if (index === 3) return tempSimBet3;
-    }
-
-    function calculateSimReturn(index) {
-        const stakeInput = document.getElementById(`sim-stake-${index}`);
-        const oddInput = document.getElementById(`sim-odd-${index}`);
-        const returnEl = document.getElementById(`sim-return-${index}`);
-        const greenBtn = document.getElementById(`sim-green-${index}`);
-        const redBtn = document.getElementById(`sim-red-${index}`);
-        
-        const stake = parseFloat(stakeInput.value) || 0;
-        const odd = parseFloat(oddInput.value) || 0;
-        
-        const potentialReturn = stake * odd;
-        const profit = potentialReturn - stake;
-        const loss = -stake;
-        
-        const tempBet = getTempSimBet(index);
-        tempBet.stake = stake;
-        tempBet.odd = odd;
-        tempBet.profit = profit;
-        tempBet.loss = loss;
-        
-        returnEl.textContent = formatCurrency(potentialReturn);
-        
-        if (stake > 0 && odd > 0) {
-            greenBtn.disabled = false;
-            redBtn.disabled = false;
-        } else {
-            greenBtn.disabled = true;
-            redBtn.disabled = true;
-        }
-    }
-    
-    function renderStrategySimulation(index) {
-        const betList = getStrategyBetList(index); // Pega os dados globais atualizados pelo onSnapshot
-        const chartCtx = document.getElementById(`sim-chart-${index}`).getContext('2d');
-        let chartInstance = null;
-        if (index === 1) chartInstance = simChart1;
-        if (index === 2) chartInstance = simChart2;
-        if (index === 3) chartInstance = simChart3;
-
-        const summaryEl = document.getElementById(`sim-summary-${index}`);
-        const historyBody = document.getElementById(`sim-history-${index}`);
-        
-        // 1. Renderizar Tabela de Histórico (Últimos 5)
-        historyBody.innerHTML = '';
-        if (betList.length === 0) {
-            historyBody.innerHTML = `<tr><td colspan="3" class="p-2 text-center text-gray-500">Nenhuma simulação.</td></tr>`;
-        } else {
-            const recentBets = betList.slice(0, 5); // Pega os 5 mais recentes (já está ordenado desc)
-            recentBets.forEach(bet => {
-                const row = document.createElement('tr');
-                const profitClass = getProfitClass(bet.profit);
-                const resultClass = bet.result === 'green' ? 'text-green-600 font-medium' : 'text-red-600 font-medium';
-                row.classList.add('fade-in');
-                // **IMPORTANTE**: onclick agora usa `bet.id` (string)
-                row.innerHTML = `
-                    <td class="p-2 ${resultClass}">${bet.result === 'green' ? 'Green' : 'Red'}</td>
-                    <td class="p-2 ${profitClass}">${formatCurrency(bet.profit)}</td>
-                    <td class="p-2 text-right">
-                        <button onclick="openEditSimModal(${index}, '${bet.id}')" class="text-gray-500 hover:text-blue-600 mr-2" title="Editar">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" /></svg>
-                        </button>
-                        <button onclick="deleteSimBet(${index}, '${bet.id}')" class="text-gray-400 hover:text-red-500 inline-flex" title="Excluir">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                    </td>
-                `;
-                historyBody.appendChild(row);
-            });
-        }
-        
-        // 2. Renderizar Sumário
-        const totalProfit = betList.reduce((acc, bet) => acc + bet.profit, 0);
-        summaryEl.textContent = `Lucro Total: ${formatCurrency(totalProfit)}`;
-        summaryEl.className = `text-lg font-bold ${getProfitClass(totalProfit)}`;
-        
-        // 3. Renderizar Gráfico
-        if (chartInstance) chartInstance.destroy();
-        
-        const labels = ['Início'];
-        const data = [0];
-        let currentProfit = 0;
-        
-        // Inverte para calcular do mais antigo para o mais novo
-        [...betList].reverse().forEach(bet => {
-            currentProfit += bet.profit;
-            labels.push(bet.createdAt.toLocaleDateString('pt-BR'));
-            data.push(currentProfit);
-        });
-
-        chartInstance = new Chart(chartCtx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: `Evolução (Est. ${index})`,
-                    data: data,
-                    borderColor: totalProfit > 0 ? 'rgb(22, 163, 74)' : (totalProfit < 0 ? 'rgb(220, 38, 38)' : 'rgb(107, 114, 128)'),
-                    backgroundColor: totalProfit > 0 ? 'rgba(22, 163, 74, 0.1)' : (totalProfit < 0 ? 'rgba(220, 38, 38, 0.1)' : 'rgba(107, 114, 128, 0.1)'),
-                    fill: true,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: true,
-                plugins: { legend: { display: false } },
-                scales: { 
-                    y: { ticks: { callback: (value) => formatCurrency(value) } }, 
-                    x: { ticks: { autoSkip: true, maxTicksLimit: 6 } } 
-                },
-                plugins: { tooltip: { callbacks: { label: (context) => `Lucro: ${formatCurrency(context.parsed.y)}` } } }
-            }
-        });
-        
-        // Armazena a instância do gráfico
-        if (index === 1) simChart1 = chartInstance;
-        if (index === 2) simChart2 = chartInstance;
-        if (index === 3) simChart3 = chartInstance;
-    }
+    return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
