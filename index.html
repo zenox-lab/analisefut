@@ -1,1422 +1,824 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Ligas</title>
-    <!-- Carrega o Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Carrega a biblioteca de Ícones (Lucide) -->
-    <script src="https://unpkg.com/lucide-dev@latest/dist/lucide.js"></script>
+// --- IMPORTS DO FIREBASE ---
+// Usamos a versão 'compat' para uma transição mais fácil, mas a modular é preferível para produção.
+// (O usuário forneceu o snippet modular, mas a lógica de migração do localStorage é complexa.
+// Vou usar os imports modulares que são o padrão moderno.)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { 
+    getAuth, 
+    signInAnonymously, 
+    onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, 
+    getDoc, 
+    setDoc, 
+    addDoc, 
+    deleteDoc, 
+    onSnapshot, 
+    collection, 
+    query, 
+    Timestamp, 
+    serverTimestamp,
+    orderBy,
+    setLogLevel
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// --- CONFIG DO FIREBASE (FORNECIDA PELO USUÁRIO) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyDRa59Ic1B3T6iMiI_lf4qUR31V1e3JwxI", // Corrigido: Removido ' ' do final
+  authDomain: "dashbord-ec5ce.firebaseapp.com",
+  projectId: "dashbord-ec5ce",
+  storageBucket: "dashbord-ec5ce.firebasestorage.app",
+  messagingSenderId: "781533071681",
+  appId: "1:781533071681:web:1bc16f3685f8d754d079c0",
+  measurementId: "G-2RVKJPXJTY"
+};
+
+// --- INICIALIZAÇÃO DO FIREBASE ---
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+setLogLevel('debug'); // Útil para ver logs do Firestore
+
+// --- VARIÁVEIS GLOBAIS DO APP ---
+let currentUserId = null; // ID do usuário logado
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // ID do App (para regras do Firestore)
+
+// --- ESTADO DA APLICAÇÃO (AGORA VAZIO, PREENCHIDO PELO FIREBASE) ---
+let allBets = [];
+let allPotentialBets = [];
+let strategy1Bets = [];
+let strategy2Bets = [];
+let strategy3Bets = [];
+let initialBalance = 0;
+
+let currentFilter = 'all'; // 'all', 'today', 'week', 'month'
+let balanceChart = null; // Gráfico 1
+let potentialBalanceChart = null; // Gráfico 2
+let simChart1 = null, simChart2 = null, simChart3 = null;
+
+// --- REFERÊNCIAS GLOBAIS DO DOM ---
+const loadingIndicator = document.getElementById('loading-indicator');
+const navInicio = document.getElementById('nav-inicio');
+const navEstrategia = document.getElementById('nav-estrategia');
+const viewInicio = document.getElementById('view-inicio');
+const viewEstrategia = document.getElementById('view-estrategia');
+const navLinks = document.querySelectorAll('.nav-link');
+const betForm = document.getElementById('bet-form');
+const descriptionInput = document.getElementById('bet-description');
+const amountInput = document.getElementById('bet-amount');
+const returnInput = document.getElementById('return-amount');
+const historyBody = document.getElementById('bet-history-body');
+const emptyRow = document.getElementById('empty-row');
+const potentialBetForm = document.getElementById('potential-bet-form');
+const potentialAmountInput = document.getElementById('potential-bet-amount');
+const potentialReturnInput = document.getElementById('potential-return-amount');
+const potentialHistoryBody = document.getElementById('potential-history-body');
+const emptyPotentialRow = document.getElementById('empty-potential-row');
+const initialBalanceInput = document.getElementById('initial-balance-input');
+const totalBalanceEl = document.getElementById('total-balance');
+const totalWinningsEl = document.getElementById('total-winnings');
+const totalLossesEl = document.getElementById('total-losses');
+const winningsPeriodEl = document.getElementById('winnings-period');
+const lossesPeriodEl = document.getElementById('losses-period');
+const balanceChartCtx = document.getElementById('balance-chart').getContext('2d');
+const potentialChartCtx = document.getElementById('potential-chart').getContext('2d');
+const filterAllBtn = document.getElementById('filter-all');
+const filterTodayBtn = document.getElementById('filter-today');
+const filterWeekBtn = document.getElementById('filter-week');
+const filterMonthBtn = document.getElementById('filter-month');
+const filterButtons = [filterAllBtn, filterTodayBtn, filterWeekBtn, filterMonthBtn];
     
-    <!-- === ADICIONADO: Firebase SDKs (Versão Compat) === -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <!-- auth-compat.js é necessário para o Login Anônimo -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script> 
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-    
-    <style>
-        /* Tema Claro */
-        :root {
-            --bg-color: #f4f7f6; /* Fundo principal (branco-acinzentado) */
-            --card-bg-color: #ffffff; /* Fundo dos cards (branco puro) */
-            --text-color-primary: #1a202c; /* Texto principal (quase preto) */
-            --text-color-secondary: #5a6a85; /* Texto secundário (cinza-azulado) */
-            --border-color: #e2e8f0; /* Bordas (cinza claro) */
-            --accent-color: #3b82f6; /* Cor de destaque (azul) */
-            --accent-color-hover: #2563eb; /* Destaque hover */
-            --danger-color: #ef4444; /* Vermelho para excluir */
-            --danger-color-hover: #dc2626; /* Vermelho hover */
-            --sidebar-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Gradiente sutil para header */
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color-primary);
-            transition: background-color 0.3s;
-        }
-        /* ... (O restante do seu CSS permanece o mesmo) ... */
-        /* ... (Vou omitir por brevidade, mas ele está incluído no arquivo) ... */
-        .app-layout { display: flex; min-height: 100vh; }
-        .sidebar {
-            width: 320px;
-            background: linear-gradient(to bottom, var(--card-bg-color), #f8fafc);
-            border-right: 1px solid var(--border-color);
-            padding: 1.5rem;
-            overflow-y: auto;
-            flex-shrink: 0;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
-        }
-        .sidebar-header {
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-            background: var(--sidebar-gradient);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            color: white;
-            text-align: center;
-        }
-        .sidebar-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: white;
-            margin-bottom: 0.25rem;
-        }
-        .sidebar-subtitle {
-            font-size: 0.875rem;
-            color: rgba(255, 255, 255, 0.9);
-        }
-        .league-list { display: flex; flex-direction: column; gap: 1rem; }
-        .main-content {
-            flex: 1;
-            padding: 1.5rem;
-            max-width: 7xl;
-            margin: 0 auto;
-            width: 100%;
-        }
-        .league-card {
-            display: flex;
-            align-items: center;
-            background-color: var(--card-bg-color);
-            border-radius: 1rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-            padding: 1rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(59, 130, 246, 0.1);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-        .league-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .league-card:hover {
-            transform: translateY(-4px) scale(1.02);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
-            border-color: var(--accent-color);
-        }
-        .league-card:hover::before { opacity: 1; }
-        .logo-container {
-            flex-shrink: 0;
-            height: 4rem;
-            width: 4rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-right: 1rem;
-            border-radius: 0.75rem;
-            padding: 0.5rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-        .league-logo {
-            height: 2.5rem;
-            width: auto;
-            object-fit: contain;
-            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-        }
-        .league-info { flex: 1; text-align: left; }
-        .league-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text-color-primary);
-            margin-bottom: 0.25rem;
-            letter-spacing: -0.025em;
-        }
-        .league-subtitle {
-            font-size: 0.75rem;
-            color: var(--text-color-secondary);
-            font-weight: 400;
-        }
-        .premier-league .logo-container { background: linear-gradient(135deg, #EE3131, #CC0000); }
-        .laliga .logo-container { background: linear-gradient(135deg, #004494, #003A7D); }
-        .bundesliga .logo-container { background: linear-gradient(135deg, #FFDA44, #FFD700); }
-        .serie-a .logo-container { background: linear-gradient(135deg, #0052CC, #0047AB); }
-        .ligue-1 .logo-container { background: linear-gradient(135deg, #0093DD, #007BB5); }
-        .liga-portugal .logo-container { background: linear-gradient(135deg, #E10014, #CC0000); }
-        .analise-time .logo-container { background: linear-gradient(135deg, var(--accent-color), var(--accent-color-hover)); }
-        .analise-time .league-logo { color: white; fill: white; }
-        .analise-jogo .logo-container { background: linear-gradient(135deg, #10b981, #059669); }
-        .analise-jogo .league-logo { color: white; fill: white; }
-        .header-title {
-            font-size: 2.25rem;
-            font-weight: 800;
-            color: var(--text-color-primary);
-            text-align: center;
-            margin-bottom: 0.5rem;
-        }
-        .header-subtitle {
-            font-size: 1.125rem;
-            color: var(--text-color-secondary);
-            text-align: center;
-            margin-bottom: 2.5rem;
-        }
-        .welcome-message {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: var(--text-color-secondary);
-        }
-        .welcome-message h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--text-color-primary);
-            margin-bottom: 1rem;
-        }
-        .grid-3-col { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 1.5rem; }
-        @media (min-width: 640px) { .grid-3-col { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (min-width: 1024px) { .grid-3-col { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-        .analysis-grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem; }
-        @media (min-width: 768px) { .analysis-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (min-width: 1280px) { .analysis-grid { grid-template-columns: repeat(3, 1fr); } }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0.625rem 1.25rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            transition: all 0.2s ease-in-out;
-            cursor: pointer;
-            border: 1px solid transparent;
-        }
-        .btn-primary { background-color: var(--accent-color); color: #ffffff; border-color: var(--accent-color); }
-        .btn-primary:hover { background-color: var(--accent-color-hover); border-color: var(--accent-color-hover); }
-        .btn-secondary { background-color: var(--card-bg-color); color: var(--text-color-primary); border-color: var(--border-color); box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
-        .btn-secondary:hover { background-color: #f9fafb; }
-        .btn-success { background-color: #10b981; color: #ffffff; border-color: #10b981; }
-        .btn-success:hover { background-color: #059669; border-color: #059669; }
-        .btn-danger { background-color: var(--danger-color); color: #ffffff; }
-        .btn-danger:hover { background-color: var(--danger-color-hover); }
-        .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.875rem; }
-        .form-input, .form-select, .form-date {
-            width: 100%;
-            background-color: #ffffff;
-            color: var(--text-color-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        }
-        .form-input:focus, .form-select:focus, .form-date:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-        }
-        .form-label {
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--text-color-secondary);
-            margin-bottom: 0.5rem;
-        }
-        .form-group { margin-bottom: 1.25rem; }
-        .content-card {
-            background-color: var(--card-bg-color);
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
-            border: 1px solid var(--border-color);
-            overflow: hidden;
-        }
-        .content-card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color); }
-        .content-card-title { font-size: 1.25rem; font-weight: 600; color: var(--text-color-primary); }
-        .content-card-body { padding: 1.5rem; }
-        .game-card {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            padding: 1.25rem;
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            margin-bottom: 1rem;
-            background-color: #f9fafb;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-        }
-        .game-card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-        .game-date { font-size: 0.875rem; font-weight: 500; color: var(--text-color-secondary); }
-        .game-teams { font-size: 1.125rem; font-weight: 600; text-align: center; flex-grow: 1; }
-        .game-score-details { display: flex; justify-content: center; gap: 1.5rem; text-align: center; }
-        .score-block { font-size: 0.875rem; color: var(--text-color-secondary); }
-        .score-block span { display: block; font-size: 1.25rem; font-weight: 600; color: var(--text-color-primary); }
-        .team-stats-card {
-            background-color: #f9fafb;
-            border-radius: 0.75rem;
-            border: 1px solid var(--border-color);
-            padding: 1rem;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-        }
-        .team-stats-card:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1); }
-        .team-stats-header {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: var(--text-color-primary);
-            margin-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.75rem;
-        }
-        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
-        .stat-item { text-align: center; }
-        .stat-label {
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: var(--text-color-secondary);
-            text-transform: uppercase;
-            margin-bottom: 0.25rem;
-        }
-        .stat-value { font-size: 1.25rem; font-weight: 700; color: var(--text-color-primary); }
-        .stat-total-games {
-            font-size: 0.875rem;
-            color: var(--text-color-secondary);
-            margin-top: 1rem;
-            text-align: center;
-            font-style: italic;
-        }
-        .mosaic-league-card {
-            background-color: var(--card-bg-color);
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
-            padding: 1.5rem;
-            text-align: center;
-            transition: all 0.2s ease-in-out;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-        }
-        .mosaic-league-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
-        }
-        .mosaic-logo-container {
-            height: 6rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 1.25rem;
-        }
-        .mosaic-league-logo { height: 5rem; width: auto; object-fit: contain; }
-        .mosaic-league-title { font-size: 1.25rem; font-weight: 600; color: var(--text-color-primary); }
-        .team-mosaic-card {
-            background-color: var(--card-bg-color);
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
-            padding: 1.5rem;
-            text-align: center;
-            transition: all 0.2s ease-in-out;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
-        }
-        .team-mosaic-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
-        }
-        .team-mosaic-title { font-size: 1.25rem; font-weight: 600; color: var(--text-color-primary); }
-        .prob-card {
-            background-color: var(--card-bg-color);
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.07);
-            border: 1px solid var(--border-color);
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        .prob-header {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--text-color-primary);
-            margin-bottom: 1rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.5rem;
-        }
-        .prob-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-        .prob-label { font-size: 0.875rem; color: var(--text-color-secondary); }
-        .prob-value { font-size: 1rem; font-weight: 600; color: var(--accent-color); }
-        .hidden { display: none; }
-        .icon {
-            width: 1.125rem;
-            height: 1.125rem;
-            stroke-width: 2.5;
-            margin-right: 0.5rem;
-            vertical-align: text-bottom;
-        }
-    </style>
-</head>
-<body>
-    
-    <div class="app-layout">
-        
-        <!-- === MENU LATERAL COM LIGAS === -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h1 class="sidebar-title">Dashboard de Ligas</h1>
-                <p class="sidebar-subtitle">Selecione uma liga</p>
-            </div>
-            
-            <div class="league-list">
-                <!-- Card para Análise Jogo -->
-                <div class="league-card analise-jogo" data-menu="analise-jogo">
-                    <div class="logo-container">
-                        <i data-lucide="zap" class="league-logo"></i>
-                    </div>
-                    <div class="league-info">
-                        <h3 class="league-title">Análise Jogo</h3>
-                        <p class="league-subtitle">Análise de confrontos</p>
-                    </div>
-                </div>
-                <!-- Card para Análise Time -->
-                <div class="league-card analise-time" data-menu="analise-time">
-                    <div class="logo-container">
-                        <i data-lucide="bar-chart-3" class="league-logo"></i>
-                    </div>
-                    <div class="league-info">
-                        <h3 class="league-title">Análise Time</h3>
-                        <p class="league-subtitle">Estatísticas por equipe</p>
-                    </div>
-                </div>
-                <!-- Premier League -->
-                <div class="league-card premier-league" data-league="Premier League">
-                    <div class="logo-container">
-                        <img src="https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_logo.svg" alt="Logo Premier League" class="league-logo">
-                    </div>
-                    <div class="league-info">
-                        <h3 class="league-title">Premier League</h3>
-                        <p class="league-subtitle">Inglaterra</p>
-                    </div>
-                </div>
-                <!-- LaLiga -->
-                <div class="league-card laliga" data-league="LaLiga">
-                    <div class="logo-container">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/1/13/LaLiga_EA_Sports_2023_Vertical_Logo.svg" alt="Logo LaLiga" class="league-logo">
-                    </div>
-                    <div class="league-info">
-                        <h3 class="league-title">LaLiga</h3>
-                        <p class="league-subtitle">Espanha</p>
-                    </div>
-                </div>
-                <!-- Bundesliga -->
-                <div class="league-card bundesliga" data-league="Bundesliga">
-                    <div class="logo-container">
-                        <img src="https://upload.wikimedia.org/wikipedia/en/d/df/Bundesliga_logo_%282017%29.svg" alt="Logo Bundesliga" class="league-logo">
-                    </div>
-                    <div class="league-info">
-                        <h3 class="league-title">Bundesliga</h3>
-                        <p class="league-subtitle">Alemanha</p>
-                    </div>
-                </div>
-                <!-- Serie A -->
-                <div class="league-card serie-a" data-league="Serie A">
-                    <div class="logo-container">
-                        <img src="https://upload.wikimedia.org/wikipedia/en/e/e1/Serie_A_logo_%282019%29.svg" alt="Logo Serie A" class="league-logo">
-                    </div>
-                    <div class="league-info">
-                        <h3 class="league-title">Serie A</h3>
-                        <p class="league-subtitle">Itália</p>
-                    </div>
-                </div>
-                <!-- Ligue 1 -->
-                <div class="league-card ligue-1" data-league="Ligue 1">
-                    <div class="logo-container">
-                        <img src="httpsD://upload.wikimedia.org/wikipedia/commons/c/ca/Ligue1_Uber_Eats_Logo.svg" alt="Logo Ligue 1" class="league-logo">
-                    </div>
-                    <div class="league-info">
-                        <h3 class="league-title">Ligue 1</h3>
-                        <p class="league-subtitle">França</p>
-                    </div>
-                </div>
-                <!-- Liga Portugal -->
-                <div class="league-card liga-portugal" data-league="Liga Portugal">
-                    <div class="logo-container">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/4/4b/Liga_Portugal_Betclic_logo.svg" alt="Logo Liga Portugal" class="league-logo">
-                    </div>
-                    <div class="league-info">
-                        <h3 class="league-title">Liga Portugal</h3>
-                        <p class="league-subtitle">Portugal</p>
-                    </div>
-                </div>
-            </div>
-        </aside>
+// Constantes de data (movidas para o topo para acesso global)
+const now = new Date();
+const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+const startOfWeek = new Date(now);
+startOfWeek.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1)); // Segunda como início da semana
+startOfWeek.setHours(0, 0, 0, 0);
+const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
 
-        <!-- === CONTEÚDO PRINCIPAL === -->
-        <main class="main-content">
-            
-            <!-- Tela Inicial de Boas-Vindas -->
-            <div id="welcome-view">
-                <div class="welcome-message">
-                    <h1 class="header-title">Bem-vindo ao Dashboard de Ligas</h1>
-                    <p class="header-subtitle">Selecione uma liga no menu lateral para ver ou registrar estatísticas.</p>
-                </div>
-            </div>
-
-            <!-- === CONTEÚDO DA LIGA (escondido initially) === -->
-            <section id="league-content" class="hidden">
-                
-                <!-- Título da Liga -->
-                <h1 id="league-view-title" class="header-title" style="margin-bottom: 2rem; text-align: left;"></h1>
-
-                <!-- Layout de Conteúdo -->
-                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                    
-                    <!-- Formulário de Registro -->
-                    <div class="content-card">
-                        <div class="content-card-header">
-                            <h2 class="content-card-title">Registrar Novo Jogo</h2>
-                        </div>
-                        <form id="game-form" class="content-card-body">
-                            <div class="form-group">
-                                <label for="game-date" class="form-label">Data do Jogo</label>
-                                <input type="date" id="game-date" class="form-date" required>
-                            </div>
-                            
-                            <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem;">
-                                <div class="form-group">
-                                    <label for="home-team-select" class="form-label">Time da Casa</label>
-                                    <select id="home-team-select" class="form-select" required></select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="away-team-select" class="form-label">Time Visitante</label>
-                                    <select id="away-team-select" class="form-select" required></select>
-                                </div>
-                            </div>
-                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-                                <div class="form-group">
-                                    <label for="home-goals" class="form-label">Gols Casa</label>
-                                    <input type="number" id="home-goals" class="form-input" min="0" value="0" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="away-goals" class="form-label">Gols Visitante</label>
-                                    <input type="number" id="away-goals" class="form-input" min="0" value="0" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="home-corners" class="form-label">Escanteios Casa</label>
-                                    <input type="number" id="home-corners" class="form-input" min="0" value="0" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="away-corners" class="form-label">Escanteios Visitante</label>
-                                    <input type="number" id="away-corners" class="form-input" min="0" value="0" required>
-                                </div>
-                            </div>
-                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-                                <div class="form-group">
-                                    <label for="home-cards" class="form-label">Cartões Casa</label>
-                                    <input type="number" id="home-cards" class="form-input" min="0" value="0" required>
-                                </div>
-                                <div class="form-group">
-                                    <label for="away-cards" class="form-label">Cartões Visitante</label>
-                                    <input type="number" id="away-cards" class="form-input" min="0" value="0" required>
-                                </div>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                                <i data-lucide="save" class="icon"></i>
-                                Salvar Jogo
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Análise por Time (Mosaico) -->
-                    <div class="content-card">
-                        <div class="content-card-header">
-                            <h2 class="content-card-title">Análise por Time</h2>
-                        </div>
-                        <div class="content-card-body">
-                            <p style="font-size: 0.875rem; color: var(--text-color-secondary); margin-bottom: 1rem;">Média dos últimos 10 jogos registrados.</p>
-                            <div id="team-analysis-container" class="analysis-grid">
-                                <!-- Os cards de estatística de time serão inseridos aqui -->
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Jogos Salvos -->
-                    <div class="content-card">
-                        <div class="content-card-header">
-                            <h2 class="content-card-title">Jogos Salvos</h2>
-                        </div>
-                        <div class="content-card-body">
-                            <div id="game-list-container">
-                                <!-- Os cards de jogo serão inseridos aqui -->
-                            </div>
-                            <p id="no-games-message" style="text-align: center; color: var(--text-color-secondary); padding: 1rem;" class="hidden">Nenhum jogo salvo para esta liga.</p>
-                        </div>
-                    </div>
-                </div> <!-- Fim Layout de Conteúdo -->
-                
-            </section>
-
-            <!-- === MOSAICO DE LIGAS PARA ANÁLISE TIME === -->
-            <section id="league-mosaic-view" class="hidden">
-                <h1 class="header-title">Selecione uma Liga para Análise de Times</h1>
-                <div class="grid-3-col" id="league-mosaic-container">
-                    <!-- Cards de ligas gerados via JS -->
-                </div>
-            </section>
-
-            <!-- === MOSAICO DE LIGAS PARA ANÁLISE JOGO === -->
-            <section id="jogo-league-mosaic-view" class="hidden">
-                <h1 class="header-title">Selecione uma Liga para Análise de Jogo</h1>
-                <div class="grid-3-col" id="jogo-league-mosaic-container">
-                    <!-- Cards de ligas gerados via JS -->
-                </div>
-            </section>
-
-            <!-- === SELEÇÃO DE TIMES PARA JOGO === -->
-            <section id="jogo-team-select-view" class="hidden">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                    <button id="back-to-jogo-league-mosaic-btn" class="btn btn-secondary">
-                        <i data-lucide="arrow-left" class="icon"></i>
-                        Voltar às Ligas
-                    </button>
-                    <h1 id="jogo-team-select-title" class="header-title" style="margin-bottom: 0;"></h1>
-                    <div style="width: 80px;"></div>
-                </div>
-                <div class="content-card">
-                    <div class="content-card-body">
-                        <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 1rem; max-width: 500px; margin: 0 auto;">
-                            <div class="form-group">
-                                <label for="home-team-jogo-select" class="form-label">Time da Casa</label>
-                                <select id="home-team-jogo-select" class="form-select" required></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="away-team-jogo-select" class="form-label">Time Visitante</label>
-                                <select id="away-team-jogo-select" class="form-select" required></select>
-                            </div>
-                        </div>
-                        <button id="analyze-jogo-btn" class="btn btn-success" style="width: 100%; margin-top: 1rem;">
-                            <i data-lucide="zap" class="icon"></i>
-                            Analisar Confronto
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- === RESULTADOS ANÁLISE JOGO === -->
-            <section id="jogo-analysis-view" class="hidden">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                    <button id="back-to-jogo-team-select-btn" class="btn btn-secondary">
-                        <i data-lucide="arrow-left" class="icon"></i>
-                        Voltar à Seleção
-                    </button>
-                    <h1 id="jogo-analysis-title" class="header-title" style="margin-bottom: 0;"></h1>
-                    <div style="width: 80px;"></div>
-                </div>
-                <div id="jogo-probabilities-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
-                    <!-- Probabilidades geradas via JS -->
-                </div>
-            </section>
-
-            <!-- === MOSAICO DE TIMES PARA TIME ANALYSIS === -->
-            <section id="team-mosaic-view" class="hidden">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                    <button id="back-to-league-mosaic-btn" class="btn btn-secondary">
-                        <i data-lucide="arrow-left" class="icon"></i>
-                        Voltar às Ligas
-                    </button>
-                    <h1 id="team-mosaic-title" class="header-title" style="margin-bottom: 0;"></h1>
-                    <div style="width: 80px;"></div>
-                </div>
-                <div class="analysis-grid" id="team-mosaic-container">
-                    <!-- Cards de times gerados via JS -->
-                </div>
-            </section>
-
-            <!-- === ANÁLISE SINGLE TIME === -->
-            <section id="single-team-analysis-view" class="hidden">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                    <button id="back-to-team-mosaic-btn" class="btn btn-secondary">
-                        <i data-lucide="arrow-left" class="icon"></i>
-                        Voltar aos Times
-                    </button>
-                    <h1 id="single-team-title" class="header-title" style="margin-bottom: 0;"></h1>
-                    <div style="width: 80px;"></div>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                    <!-- Cards de Stats do Time -->
-                    <div class="content-card" style="max-width: 400px; margin: 0 auto;">
-                        <div class="content-card-body">
-                            <h3 class="team-stats-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 1rem;">Gols e Escanteios</h3>
-                            <div id="single-team-stats-ge-container" class="stats-grid">
-                                <!-- Stats de gols e escanteios gerados via JS -->
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-card" style="max-width: 400px; margin: 0 auto;">
-                        <div class="content-card-body">
-                            <h3 class="team-stats-header" style="border-bottom: none; padding-bottom: 0; margin-bottom: 1rem;">Cartões</h3>
-                            <div id="single-team-stats-cards-container" class="stats-grid">
-                                <!-- Stats de cartões gerados via JS -->
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Jogos do Time -->
-                    <div class="content-card">
-                        <div class="content-card-header">
-                            <h2 class="content-card-title">Jogos do Time</h2>
-                        </div>
-                        <div class="content-card-body">
-                            <div id="single-team-games-container">
-                                <!-- Cards de jogos gerados via JS -->
-                            </div>
-                            <p id="no-team-games-message" style="text-align: center; color: var(--text-color-secondary); padding: 1rem;" class="hidden">Nenhum jogo salvo para este time.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-        </main>
-        
-    </div> <!-- Fim .app-layout -->
-
-    <script>
-        // --- PASSO 1: CONFIGURAÇÃO DO FIREBASE (MODO GITHUB/LOCAL) ---
-        // Esta é a sua configuração pessoal, que vai funcionar
-        // fora do ambiente do Canvas (ex: GitHub Pages).
-        const firebaseConfig = {
-          apiKey: "AIzaSyDRa59Ic1B3T6iMiI_lf4qUR31V1e3JwxI", // Sua Chave de API
-          authDomain: "dashbord-ec5ce.firebaseapp.com",
-          projectId: "dashbord-ec5ce",
-          storageBucket: "dashbord-ec5ce.firebasestorage.app",
-          messagingSenderId: "781533071681",
-          appId: "1:781533071681:web:1bc16f3685f8d754d079c0",
-          measurementId: "G-2RVKJPXJTY"
-        };
-    
-        // --- PASSO 2: INICIALIZE O FIREBASE E O FIRESTORE ---
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore(); // Nosso banco de dados
-        const auth = firebase.auth();   // Nossa autenticação
-        
-        let userId = null; // Será definido após a autenticação
-        let gamesCollection = null; // Será definido após a autenticação
-        
-        // --- Inicialização do Lucide (Ícones) ---
-        setTimeout(() => {
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }, 100);
-    
-        // --- Dados das Ligas e Times (Temporada 2024/2025) ---
-        const leagueTeams = {
-            "Premier League": ["Arsenal", "Aston Villa", "Bournemouth", "Brentford", "Brighton", "Chelsea", "Crystal Palace", "Everton", "Fulham", "Ipswich Town", "Leicester City", "Liverpool", "Man City", "Man Utd", "Newcastle", "Nottingham Forest", "Southampton", "Tottenham", "West Ham", "Wolves"],
-            "LaLiga": ["Alavés", "Athletic Bilbao", "Atlético Madrid", "Barcelona", "Celta Vigo", "Espanyol", "Getafe", "Girona", "Las Palmas", "Leganés", "Mallorca", "Osasuna", "Rayo Vallecano", "Real Betis", "Real Madrid", "Real Sociedad", "Sevilla", "Valencia", "Valladolid", "Villarreal"],
-            "Bundesliga": ["Augsburg", "Bayer Leverkusen", "Bayern Munich", "Bochum", "Borussia Dortmund", "Borussia M'gladbach", "Eintracht Frankfurt", "Freiburg", "Heidenheim", "Holstein Kiel", "Hoffenheim", "Mainz", "RB Leipzig", "St. Pauli", "Stuttgart", "Union Berlin", "Werder Bremen", "Wolfsburg"],
-            "Serie A": ["Atalanta", "Bologna", "Cagliari", "Como", "Empoli", "Fiorentina", "Genoa", "Hellas Verona", "Inter Milan", "Juventus", "Lazio", "Lecce", "AC Milan", "Monza", "Napoli", "Parma", "Roma", "Torino", "Udinese", "Venezia"],
-            "Ligue 1": ["Angers", "Auxerre", "Brest", "Le Havre", "Lens", "Lille", "Lyon", "Marseille", "Monaco", "Montpellier", "Nantes", "Nice", "PSG", "Reims", "Rennes", "Saint-Étienne", "Strasbourg", "Toulouse"],
-            "Liga Portugal": ["Arouca", "AVS", "Benfica", "Boavista", "Braga", "Casa Pia", "Estrela Amadora", "Famalicon", "Farense", "Gil Vicente", "Moreirense", "Nacional", "Porto", "Rio Ave", "Santa Clara", "Sporting CP", "Vitória de Guimarães", "Vizela"]
-        };
-        // Logos das ligas para mosaico
-        const leagueLogos = {
-            "Premier League": "https://upload.wikimedia.org/wikipedia/en/f/f2/Premier_League_logo.svg",
-            "LaLiga": "https://upload.wikimedia.org/wikipedia/commons/1/13/LaLiga_EA_Sports_2023_Vertical_Logo.svg",
-            "Bundesliga": "https://upload.wikimedia.org/wikipedia/en/d/df/Bundesliga_logo_%282017%29.svg",
-            "Serie A": "https://upload.wikimedia.org/wikipedia/en/e/e1/Serie_A_logo_%282019%29.svg",
-            "Ligue 1": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Ligue1_Uber_Eats_Logo.svg",
-            "Liga Portugal": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Liga_Portugal_Betclic_logo.svg"
-        };
-    
-        // --- Banco de Dados (Agora no Firebase) ---
-        let allGames = []; // Este array será preenchido pelo Firebase
-        let currentLeague = null;
-        let currentTeam = null;
-        let currentJogoLeague = null;
-        let currentHomeTeam = null;
-        let currentAwayTeam = null;
-        
-        // --- Elementos DOM (Sem alterações) ---
-        const welcomeView = document.getElementById('welcome-view');
-        const leagueContent = document.getElementById('league-content');
-        const leagueMosaicView = document.getElementById('league-mosaic-view');
-        const teamMosaicView = document.getElementById('team-mosaic-view');
-        const singleTeamAnalysisView = document.getElementById('single-team-analysis-view');
-        const jogoLeagueMosaicView = document.getElementById('jogo-league-mosaic-view');
-        const jogoTeamSelectView = document.getElementById('jogo-team-select-view');
-        const jogoAnalysisView = document.getElementById('jogo-analysis-view');
-        const leagueCards = document.querySelectorAll('.league-card[data-league]');
-        const leagueMosaicContainer = document.getElementById('league-mosaic-container');
-        const jogoLeagueMosaicContainer = document.getElementById('jogo-league-mosaic-container');
-        const teamMosaicContainer = document.getElementById('team-mosaic-container');
-        const singleTeamStatsGEContainer = document.getElementById('single-team-stats-ge-container');
-        const singleTeamStatsCardsContainer = document.getElementById('single-team-stats-cards-container');
-        const singleTeamGamesContainer = document.getElementById('single-team-games-container');
-        const noTeamGamesMessage = document.getElementById('no-team-games-message');
-        const leagueViewTitle = document.getElementById('league-view-title');
-        const teamMosaicTitle = document.getElementById('team-mosaic-title');
-        const singleTeamTitle = document.getElementById('single-team-title');
-        const jogoTeamSelectTitle = document.getElementById('jogo-team-select-title');
-        const jogoAnalysisTitle = document.getElementById('jogo-analysis-title');
-        const jogoProbabilitiesContainer = document.getElementById('jogo-probabilities-container');
-        const gameForm = document.getElementById('game-form');
-        const gameDateInput = document.getElementById('game-date');
-        const homeTeamSelect = document.getElementById('home-team-select');
-        const awayTeamSelect = document.getElementById('away-team-select');
-        const homeGoalsInput = document.getElementById('home-goals');
-        const awayGoalsInput = document.getElementById('away-goals');
-        const homeCornersInput = document.getElementById('home-corners');
-        const awayCornersInput = document.getElementById('away-corners');
-        const homeCardsInput = document.getElementById('home-cards');
-        const awayCardsInput = document.getElementById('away-cards');
-        const homeTeamJogoSelect = document.getElementById('home-team-jogo-select');
-        const awayTeamJogoSelect = document.getElementById('away-team-jogo-select');
-        const analyzeJogoBtn = document.getElementById('analyze-jogo-btn');
-        const gameListContainer = document.getElementById('game-list-container');
-        const noGamesMessage = document.getElementById('no-games-message');
-        const teamAnalysisContainer = document.getElementById('team-analysis-container');
-        const backToLeagueMosaicBtn = document.getElementById('back-to-league-mosaic-btn');
-        const backToTeamMosaicBtn = document.getElementById('back-to-team-mosaic-btn');
-        const backToJogoLeagueMosaicBtn = document.getElementById('back-to-jogo-league-mosaic-btn');
-        const backToJogoTeamSelectBtn = document.getElementById('back-to-jogo-team-select-btn');
-        
-        // --- Funções Principais ---
-
-        /**
-         * Inicializa o Firebase e faz Login Anônimo
-         */
-        async function initializeFirebase() {
-            try {
-                // Removemos o 'signInWithCustomToken'
-                // e usamos 'signInAnonymously'
-                console.log("Autenticando anonimamente...");
-                await auth.signInAnonymously();
-
-                userId = auth.currentUser.uid;
-                console.log("UserID:", userId);
-
-                // Define o caminho da coleção. Usamos a coleção 'jogos'
-                // que você criou no seu projeto pessoal.
-                gamesCollection = db.collection('jogos');
-                
-                console.log("Firebase inicializado e autenticado. Usando coleção 'jogos'.");
-
-            } catch (error) {
-                console.error("Erro na inicialização do Firebase:", error);
-                welcomeView.innerHTML = `<h1 class='text-red-500'>Erro fatal ao conectar com o Firebase. Recarregue a página.</h1><p>${error.message}</p>`;
-                showView(welcomeView);
-            }
-        }
-        
-        /**
-         * Carrega todos os jogos do FIRESTORE
-         */
-        async function loadAllGames() {
-            if (!gamesCollection) {
-                console.error("A coleção de jogos não foi inicializada. A autenticação falhou?");
-                return;
-            }
-            try {
-                const snapshot = await gamesCollection.get();
-                allGames = []; // Limpa o array local
-                snapshot.forEach(doc => {
-                    allGames.push({ ...doc.data(), id: doc.id });
-                });
-                console.log(`Foram carregados ${allGames.length} jogos do Firebase.`);
-            } catch (error) {
-                console.error("Erro ao carregar jogos do Firebase: ", error);
-                console.error("Não foi possível carregar os dados do Firebase. Verifique sua conexão e configuração.");
-            }
-        }
-        
-        /**
-         * Esconde todas as views e mostra a especificada
-         */
-        function showView(viewToShow) {
-            [welcomeView, leagueContent, leagueMosaicView, teamMosaicView, singleTeamAnalysisView, jogoLeagueMosaicView, jogoTeamSelectView, jogoAnalysisView].forEach(view => view.classList.add('hidden'));
-            viewToShow.classList.remove('hidden');
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
-        
-        /**
-         * Renderiza mosaico de ligas para análise time
-         */
-        function renderLeagueMosaic() {
-            const leagues = Object.keys(leagueTeams);
-            leagueMosaicContainer.innerHTML = '';
-            leagues.forEach(league => {
-                const logoUrl = leagueLogos[league] || '';
-                const card = `
-                    <div class="mosaic-league-card" data-league="${league}">
-                        <div class="mosaic-logo-container">
-                            <img src="${logoUrl}" alt="Logo ${league}" class="mosaic-league-logo">
-                        </div>
-                        <h3 class="mosaic-league-title">${league}</h3>
-                    </div>
-                `;
-                leagueMosaicContainer.innerHTML += card;
-            });
-            document.querySelectorAll('.mosaic-league-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const leagueName = card.dataset.league;
-                    showTeamMosaic(leagueName);
-                });
+// ===================================================================
+// INICIALIZAÇÃO E AUTENTICAÇÃO
+// ===================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // Escuta por mudanças no estado de autenticação
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Usuário está logado
+            console.log("Usuário logado (anônimo):", user.uid);
+            currentUserId = user.uid;
+            // Usuário está pronto, inicialize a lógica principal do app
+            initializeAppLogic(currentUserId);
+        } else {
+            // Usuário não está logado, tenta fazer login anônimo
+            console.log("Nenhum usuário logado. Tentando login anônimo...");
+            signInAnonymously(auth).catch((error) => {
+                console.error("Erro no login anônimo:", error);
+                loadingIndicator.textContent = "Erro ao conectar. Por favor, atualize a página.";
             });
         }
-    
-        /**
-         * Renderiza mosaico de ligas para análise jogo
-         */
-        function renderJogoLeagueMosaic() {
-            const leagues = Object.keys(leagueTeams);
-            jogoLeagueMosaicContainer.innerHTML = '';
-            leagues.forEach(league => {
-                const logoUrl = leagueLogos[league] || '';
-                const card = `
-                    <div class="mosaic-league-card" data-league="${league}">
-                        <div class="mosaic-logo-container">
-                            <img src="${logoUrl}" alt="Logo ${league}" class="mosaic-league-logo">
-                        </div>
-                        <h3 class="mosaic-league-title">${league}</h3>
-                    </div>
-                `;
-                jogoLeagueMosaicContainer.innerHTML += card;
-            });
-            document.querySelectorAll('#jogo-league-mosaic-container .mosaic-league-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const leagueName = card.dataset.league;
-                    showJogoTeamSelect(leagueName);
-                });
-            });
-        }
-    
-        /**
-         * Mostra seleção de times para jogo
-         */
-        function showJogoTeamSelect(leagueName) {
-            currentJogoLeague = leagueName;
-            jogoTeamSelectTitle.textContent = `${leagueName} - Selecione os Times`;
-            const teams = leagueTeams[leagueName].sort();
-            homeTeamJogoSelect.innerHTML = '';
-            awayTeamJogoSelect.innerHTML = '';
-            teams.forEach(team => {
-                homeTeamJogoSelect.innerHTML += `<option value="${team}">${team}</option>`;
-                awayTeamJogoSelect.innerHTML += `<option value="${team}">${team}</option>`;
-            });
-            showView(jogoTeamSelectView);
-        }
-    
-        /**
-         * Analisa confronto de jogo
-         */
-        function analyzeJogo() {
-            const homeTeam = homeTeamJogoSelect.value;
-            const awayTeam = awayTeamJogoSelect.value;
-            if (homeTeam === awayTeam) {
-                console.warn("Os times não podem ser iguais."); 
-                return;
-            }
-            currentHomeTeam = homeTeam;
-            currentAwayTeam = awayTeam;
-            jogoAnalysisTitle.textContent = `${homeTeam} vs ${awayTeam} - Probabilidades`;
-            
-            const homeGames = allGames
-                .filter(game => game.league === currentJogoLeague && game.homeTeam === homeTeam)
-                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                .slice(0, 10);
-            
-            const awayGames = allGames
-                .filter(game => game.league === currentJogoLeague && game.awayTeam === awayTeam)
-                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                .slice(0, 10);
-            
-            const lines = {
-                goals: { homeOver: 1.5, awayOver: 0.5, totalOver: 2.5 },
-                corners: { homeOver: 5.5, awayOver: 4.5, totalOver: 9.5 },
-                cards: { homeOver: 2.5, awayOver: 2.5, totalOver: 4.5 }
-            };
-            
-            const homeGoalOver = homeGames.length > 0 ? (homeGames.filter(g => g.homeGoals > lines.goals.homeOver).length / homeGames.length * 100).toFixed(1) : 0;
-            const homeCornerOver = homeGames.length > 0 ? (homeGames.filter(g => g.homeCorners > lines.corners.homeOver).length / homeGames.length * 100).toFixed(1) : 0;
-            const homeCardOver = homeGames.length > 0 ? (homeGames.filter(g => g.homeCards > lines.cards.homeOver).length / homeGames.length * 100).toFixed(1) : 0;
-            const homeTotalGoalOver = homeGames.length > 0 ? (homeGames.filter(g => (g.homeGoals + g.awayGoals) > lines.goals.totalOver).length / homeGames.length * 100).toFixed(1) : 0;
-            const homeTotalCornerOver = homeGames.length > 0 ? (homeGames.filter(g => (g.homeCorners + g.awayCorners) > lines.corners.totalOver).length / homeGames.length * 100).toFixed(1) : 0;
-            const homeTotalCardOver = homeGames.length > 0 ? (homeGames.filter(g => (g.homeCards + g.awayCards) > lines.cards.totalOver).length / homeGames.length * 100).toFixed(1) : 0;
-            
-            const awayGoalOver = awayGames.length > 0 ? (awayGames.filter(g => g.awayGoals > lines.goals.awayOver).length / awayGames.length * 100).toFixed(1) : 0;
-            const awayCornerOver = awayGames.length > 0 ? (awayGames.filter(g => g.awayCorners > lines.corners.awayOver).length / awayGames.length * 100).toFixed(1) : 0;
-            const awayCardOver = awayGames.length > 0 ? (awayGames.filter(g => g.awayCards > lines.cards.awayOver).length / awayGames.length * 100).toFixed(1) : 0;
-            const awayTotalGoalOver = awayGames.length > 0 ? (awayGames.filter(g => (g.homeGoals + g.awayGoals) > lines.goals.totalOver).length / awayGames.length * 100).toFixed(1) : 0;
-            const awayTotalCornerOver = awayGames.length > 0 ? (awayGames.filter(g => (g.homeCorners + g.awayCorners) > lines.corners.totalOver).length / awayGames.length * 100).toFixed(1) : 0;
-            const awayTotalCardOver = awayGames.length > 0 ? (awayGames.filter(g => (g.homeCards + g.awayCards) > lines.cards.totalOver).length / awayGames.length * 100).toFixed(1) : 0;
-            
-            const avgTotalGoalOver = ((parseFloat(homeTotalGoalOver) + parseFloat(awayTotalGoalOver)) / 2).toFixed(1);
-            const avgTotalCornerOver = ((parseFloat(homeTotalCornerOver) + parseFloat(awayTotalCornerOver)) / 2).toFixed(1);
-            const avgTotalCardOver = ((parseFloat(homeTotalCardOver) + parseFloat(awayTotalCardOver)) / 2).toFixed(1);
-            
-            jogoProbabilitiesContainer.innerHTML = `
-                <div class="prob-card">
-                    <h3 class="prob-header">Gols</h3>
-                    <div class="prob-item">
-                        <span class="prob-label">${homeTeam} Over ${lines.goals.homeOver}</span>
-                        <span class="prob-value">${homeGoalOver}% (Under: ${ (100 - homeGoalOver).toFixed(1) }%)</span>
-                    </div>
-                    <div class="prob-item">
-                        <span class="prob-label">${awayTeam} Over ${lines.goals.awayOver}</span>
-                        <span class="prob-value">${awayGoalOver}% (Under: ${ (100 - awayGoalOver).toFixed(1) }%)</span>
-                    </div>
-                    <div class="prob-item">
-                        <span class="prob-label">Total Over ${lines.goals.totalOver}</span>
-                        <span class="prob-value">${avgTotalGoalOver}% (Under: ${ (100 - avgTotalGoalOver).toFixed(1) }%)</span>
-                    </div>
-                </div>
-                <div class="prob-card">
-                    <h3 class="prob-header">Escanteios</h3>
-                    <div class="prob-item">
-                        <span class="prob-label">${homeTeam} Over ${lines.corners.homeOver}</span>
-                        <span class="prob-value">${homeCornerOver}% (Under: ${ (100 - homeCornerOver).toFixed(1) }%)</span>
-                    </div>
-                    <div class="prob-item">
-                        <span class="prob-label">${awayTeam} Over ${lines.corners.awayOver}</span>
-                        <span class="prob-value">${awayCornerOver}% (Under: ${ (100 - awayCornerOver).toFixed(1) }%)</span>
-                    </div>
-                    <div class="prob-item">
-                        <span class="prob-label">Total Over ${lines.corners.totalOver}</span>
-                        <span class="prob-value">${avgTotalCornerOver}% (Under: ${ (100 - avgTotalCornerOver).toFixed(1) }%)</span>
-                    </div>
-                </div>
-                <div class="prob-card">
-                    <h3 class="prob-header">Cartões</h3>
-                    <div class="prob-item">
-                        <span class="prob-label">${homeTeam} Over ${lines.cards.homeOver}</span>
-                        <span class="prob-value">${homeCardOver}% (Under: ${ (100 - homeCardOver).toFixed(1) }%)</span>
-                    </div>
-                    <div class="prob-item">
-                        <span class="prob-label">${awayTeam} Over ${lines.cards.awayOver}</span>
-                        <span class="prob-value">${awayCardOver}% (Under: ${ (100 - awayCardOver).toFixed(1) }%)</span>
-                    </div>
-                    <div class="prob-item">
-                        <span class="prob-label">Total Over ${lines.cards.totalOver}</span>
-                        <span class="prob-value">${avgTotalCardOver}% (Under: ${ (100 - avgTotalCardOver).toFixed(1) }%)</span>
-                    </div>
-                </div>
-                <p style="text-align: center; color: var(--text-color-secondary); font-size: 0.875rem;">Baseado nos últimos 10 jogos em casa/fora de cada time.</p>
-            `;
-            showView(jogoAnalysisView);
-        }
-    
-        /**
-         * Mostra mosaico de times de uma liga (para análise time)
-         */
-        function showTeamMosaic(leagueName) {
-            currentLeague = leagueName;
-            teamMosaicTitle.textContent = `${leagueName} - Times`;
-            const teams = leagueTeams[leagueName].sort();
-            teamMosaicContainer.innerHTML = '';
-            teams.forEach(team => {
-                const card = `
-                    <div class="team-mosaic-card" data-team="${team}" data-league="${leagueName}">
-                        <h3 class="team-mosaic-title">${team}</h3>
-                    </div>
-                `;
-                teamMosaicContainer.innerHTML += card;
-            });
-            document.querySelectorAll('.team-mosaic-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const teamName = card.dataset.team;
-                    showSingleTeamAnalysis(teamName, leagueName);
-                });
-            });
-            showView(teamMosaicView);
-        }
-    
-        /**
-         * Renderiza análise single de um time
-         */
-        function showSingleTeamAnalysis(teamName, leagueName) {
-            currentTeam = teamName;
-            currentLeague = leagueName;
-            singleTeamTitle.textContent = `${teamName} - Análise`;
-            
-            const teamGames = allGames
-                .filter(game => game.league === leagueName && (game.homeTeam === teamName || game.awayTeam === teamName))
-                .sort((a, b) => new Date(b.date) - new Date(a.date))
-                .slice(0, 10);
-            
-            const homeGames = teamGames.filter(game => game.homeTeam === teamName);
-            const awayGames = teamGames.filter(game => game.awayTeam === teamName);
-            
-            let goalsHomeSum = 0, cornersHomeSum = 0;
-            homeGames.forEach(game => {
-                goalsHomeSum += game.homeGoals;
-                cornersHomeSum += game.homeCorners;
-            });
-            let goalsAwaySum = 0, cornersAwaySum = 0;
-            awayGames.forEach(game => {
-                goalsAwaySum += game.awayGoals;
-                cornersAwaySum += game.awayCorners;
-            });
-            
-            const avgGoalsHome = homeGames.length > 0 ? (goalsHomeSum / homeGames.length) : 0;
-            const avgGoalsAway = awayGames.length > 0 ? (goalsAwaySum / awayGames.length) : 0;
-            const avgCornersHome = homeGames.length > 0 ? (cornersHomeSum / homeGames.length) : 0;
-            const avgCornersAway = awayGames.length > 0 ? (cornersAwaySum / awayGames.length) : 0;
-            
-            singleTeamStatsGEContainer.innerHTML = `
-                <div class="stat-item">
-                    <div class="stat-label">Média Gols Casa</div>
-                    <div class="stat-value">${avgGoalsHome.toFixed(1)}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Média Gols Fora</div>
-                    <div class="stat-value">${avgGoalsAway.toFixed(1)}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Média Escan. Casa</div>
-                    <div class="stat-value">${avgCornersHome.toFixed(1)}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Média Escan. Fora</div>
-                    <div class="stat-value">${avgCornersAway.toFixed(1)}</div>
-                </div>
-            `;
-            
-            let cardsHomeSum = 0, cardsAwaySum = 0;
-            homeGames.forEach(game => cardsHomeSum += game.homeCards);
-            awayGames.forEach(game => cardsAwaySum += game.awayCards);
-            
-            const avgCardsHome = homeGames.length > 0 ? (cardsHomeSum / homeGames.length) : 0;
-            const avgCardsAway = awayGames.length > 0 ? (cardsAwaySum / awayGames.length) : 0;
-            
-            singleTeamStatsCardsContainer.innerHTML = `
-                <div class="stat-item">
-                    <div class="stat-label">Média Cart. Casa</div>
-                    <div class="stat-value stat-value-con">${avgCardsHome.toFixed(1)}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Média Cart. Fora</div>
-                    <div class="stat-value stat-value-con">${avgCardsAway.toFixed(1)}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Total Jogos</div>
-                    <div class="stat-value">${homeGames.length} Casa / ${awayGames.length} Fora</div>
-                </div>
-                <div class="stat-item"></div>
-            `;
-    
-            const teamGamesFull = allGames
-                .filter(game => game.league === leagueName && (game.homeTeam === teamName || game.awayTeam === teamName))
-                .sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            singleTeamGamesContainer.innerHTML = '';
-            if (teamGamesFull.length === 0) {
-                noTeamGamesMessage.classList.remove('hidden');
-            } else {
-                noTeamGamesMessage.classList.add('hidden');
-                teamGamesFull.forEach(game => {
-                    const gameCard = createGameCard(game, true);
-                    singleTeamGamesContainer.innerHTML += gameCard;
-                });
-            }
-            showView(singleTeamAnalysisView);
-        }
-    
-        /**
-         * Abre o conteúdo de uma liga específica (dashboard)
-         */
-        function openLeagueView(leagueName) {
-            currentLeague = leagueName;
-            leagueViewTitle.textContent = leagueName;
-            
-            const teams = leagueTeams[leagueName].sort();
-            homeTeamSelect.innerHTML = '';
-            awayTeamSelect.innerHTML = '';
-            teams.forEach(team => {
-                homeTeamSelect.innerHTML += `<option value="${team}">${team}</option>`;
-                awayTeamSelect.innerHTML += `<option value="${team}">${team}</option>`;
-            });
-            gameDateInput.value = new Date().toISOString().split('T')[0];
-            renderLeagueData();
-            
-            showView(leagueContent);
-        }
-    
-        /**
-         * Renderiza todos os dados da liga atual (jogos e análise)
-         */
-        function renderLeagueData() {
-            renderSavedGames(); // CORRIGIDO AQUI
-            renderTeamAnalysis();
-        }
-    
-        /**
-         * Renderiza os jogos salvos da liga atual
-         */
-        function renderSavedGames() {
-            const leagueGames = allGames
-                .filter(game => game.league === currentLeague)
-                .sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            gameListContainer.innerHTML = '';
-            
-            if (leagueGames.length === 0) {
-                noGamesMessage.classList.remove('hidden');
-            } else {
-                noGamesMessage.classList.add('hidden');
-                leagueGames.forEach(game => {
-                    const gameCard = createGameCard(game);
-                    gameListContainer.innerHTML += gameCard;
-                });
-            }
-            document.querySelectorAll('.delete-game-btn').forEach(btn => {
-                btn.addEventListener('click', handleDeleteGame);
-            });
-            
-            if (typeof lucide !== 'undefined') {
-                lucide.createIcons();
-            }
-        }
-        
-        /**
-         * Renderiza os "quadrados" de Análise por Time
-         */
-        function renderTeamAnalysis() {
-            const teams = leagueTeams[currentLeague].sort();
-            teamAnalysisContainer.innerHTML = '';
-            
-            teams.forEach(team => {
-                const teamGames = allGames
-                    .filter(game => game.league === currentLeague && (game.homeTeam === team || game.awayTeam === team))
-                    .sort((a, b) => new Date(b.date) - new Date(a.date))
-                    .slice(0, 10);
-                
-                const homeGames = teamGames.filter(game => game.homeTeam === team);
-                const awayGames = teamGames.filter(game => game.awayTeam === team);
-                
-                let goalsHomeSum = 0, cornersHomeSum = 0;
-                homeGames.forEach(game => {
-                    goalsHomeSum += game.homeGoals;
-                    cornersHomeSum += game.homeCorners;
-                });
-                let goalsAwaySum = 0, cornersAwaySum = 0;
-                awayGames.forEach(game => {
-                    goalsAwaySum += game.awayGoals;
-                    cornersAwaySum += game.awayCorners;
-                });
-                
-                const avgGoalsHome = homeGames.length > 0 ? (goalsHomeSum / homeGames.length) : 0;
-                const avgGoalsAway = awayGames.length > 0 ? (goalsAwaySum / awayGames.length) : 0;
-                const avgCornersHome = homeGames.length > 0 ? (cornersHomeSum / homeGames.length) : 0;
-                const avgCornersAway = awayGames.length > 0 ? (cornersAwaySum / awayGames.length) : 0;
-                
-                let cardsHomeSum = 0, cardsAwaySum = 0;
-                homeGames.forEach(game => cardsHomeSum += game.homeCards);
-                awayGames.forEach(game => cardsAwaySum += game.awayCards);
-                
-                const avgCardsHome = homeGames.length > 0 ? (cardsHomeSum / homeGames.length) : 0;
-                const avgCardsAway = awayGames.length > 0 ? (cardsAwaySum / awayGames.length) : 0;
-                
-                const analysisCard = `
-                    <div class="team-stats-card" data-team="${team}">
-                        <h3 class="team-stats-header">${team}</h3>
-                        <div class="stats-grid">
-                            <div class="stat-item">
-                                <div class="stat-label">Média Gols Casa</div>
-                                <div class="stat-value">${avgGoalsHome.toFixed(1)}</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Média Gols Fora</div>
-                                <div class="stat-value">${avgGoalsAway.toFixed(1)}</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Média Escan. Casa</div>
-                                <div class="stat-value">${avgCornersHome.toFixed(1)}</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Média Escan. Fora</div>
-                                <div class="stat-value">${avgCornersAway.toFixed(1)}</div>
-                            </div>
-                        </div>
-                        <div class="stats-grid" style="margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                            <div class="stat-item">
-                                <div class="stat-label">Média Cart. Casa</div>
-                                <div class="stat-value stat-value-con">${avgCardsHome.toFixed(1)}</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Média Cart. Fora</div>
-                                <div class="stat-value stat-value-con">${avgCardsAway.toFixed(1)}</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-label">Jogos Casa/Fora</div>
-                                <div class="stat-value">${homeGames.length}/${awayGames.length}</div>
-                            </div>
-                            <div class="stat-item"></div>
-                        </div>
-                    </div>
-                `;
-                teamAnalysisContainer.innerHTML += analysisCard;
-            });
-            document.querySelectorAll('.team-stats-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    const teamName = card.dataset.team;
-                    showSingleTeamAnalysis(teamName, currentLeague);
-                });
-            });
-        }
-    
-        /**
-         * Cria o HTML para um card de jogo salvo
-         */
-        function createGameCard(game, hideDelete = false) {
-            const homeScoreClass = game.homeGoals > game.awayGoals ? 'font-bold' : '';
-            const awayScoreClass = game.awayGoals > game.homeGoals ? 'font-bold' : '';
-            let deleteBtn = '';
-            if (!hideDelete) {
-                deleteBtn = `
-                    <button class="btn btn-danger btn-sm delete-game-btn" data-game-id="${game.id}">
-                        <i data-lucide="trash-2" style="width: 14px; height: 14px; margin-right: 0;"></i>
-                    </button>
-                `;
-            }
-            return `
-                <div class="game-card">
-                    <div class="game-card-header">
-                        <span class="game-date">${new Date(game.date).toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'})}</span>
-                        ${deleteBtn}
-                    </div>
-                    <div class="game-teams">
-                        ${game.homeTeam} <span style="color: var(--text-color-secondary); font-weight: 400;">vs</span> ${game.awayTeam}
-                    </div>
-                    <div class="game-score-details">
-                        <div class="score-block">
-                            Gols
-                            <span>
-                                <span class="${homeScoreClass}">${game.homeGoals}</span> x <span class="${awayScoreClass}">${game.awayGoals}</span>
-                            </span>
-                        </div>
-                        <div class="score-block">
-                            Escanteios
-                            <span>${game.homeCorners} x ${game.awayCorners}</span>
-                        </div>
-                        <div class="score-block">
-                            Cartões
-                            <span>${game.homeCards} x ${game.awayCards}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // --- Handlers de Eventos ---
-        /**
-         * Salva um novo jogo
-         */
-        async function handleSaveGame(event) {
-            event.preventDefault();
-            
-            if (homeTeamSelect.value === awayTeamSelect.value) {
-                console.warn("O time da casa não pode ser igual ao time visitante.");
-                return;
-            }
+    });
+});
 
-            if (!gamesCollection) {
-                console.error("A coleção de jogos não está pronta. Tente novamente.");
-                return;
-            }
-            
-            const newGame = {
-                date: gameDateInput.value,
-                league: currentLeague,
-                homeTeam: homeTeamSelect.value,
-                awayTeam: awayTeamSelect.value,
-                homeGoals: parseInt(homeGoalsInput.value, 10),
-                awayGoals: parseInt(awayGoalsInput.value, 10),
-                homeCorners: parseInt(homeCornersInput.value, 10),
-                awayCorners: parseInt(awayCornersInput.value, 10),
-                homeCards: parseInt(homeCardsInput.value, 10),
-                awayCards: parseInt(awayCardsInput.value, 10)
-            };
-            
-            try {
-                const docRef = await gamesCollection.add(newGame);
-                allGames.push({ ...newGame, id: docRef.id });
-                gameForm.reset();
-                gameDateInput.value = new Date().toISOString().split('T')[0];
-                renderLeagueData(); 
-            } catch (error) {
-                console.error("Erro ao salvar jogo no Firebase: ", error);
-            }
-        }
-        
-        /**
-         * Exclui um jogo
-         */
-        async function handleDeleteGame(event) {
-            const gameId = event.currentTarget.dataset.gameId;
+// ===================================================================
+// LÓGICA PRINCIPAL DO APP (SÓ RODA APÓS AUTH)
+// ===================================================================
+function initializeAppLogic(userId) {
+    console.log("Inicializando a lógica do app para o usuário:", userId);
 
-            if (!gamesCollection) {
-                console.error("A coleção de jogos não está pronta. Tente novamente.");
-                return;
-            }
-            
-            // REMOVIDO: if (confirm(...))
-            // NUNCA use 'confirm' ou 'alert'
-            try {
-                await gamesCollection.doc(gameId).delete();
-                allGames = allGames.filter(game => game.id !== gameId);
-                renderLeagueData();
-            } catch (error) {
-                console.error("Erro ao excluir jogo do Firebase: ", error);
-            }
+    // --- CAMINHOS DO FIRESTORE ---
+    const settingsDocRef = doc(db, `artifacts/${appId}/users/${userId}/settings/main`);
+    const betsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/bets`);
+    const potentialBetsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/potentialBets`);
+    const simBets1CollectionRef = collection(db, `artifacts/${appId}/users/${userId}/simBets1`);
+    const simBets2CollectionRef = collection(db, `artifacts/${appId}/users/${userId}/simBets2`);
+    const simBets3CollectionRef = collection(db, `artifacts/${appId}/users/${userId}/simBets3`);
+
+    // --- ESCONDE O LOADING E MOSTRA O APP ---
+    loadingIndicator.classList.add('hidden');
+    showView('inicio'); // Mostra a view inicial
+
+    // --- CONFIGURA OS LISTENERS DE NAVEGAÇÃO ---
+    navInicio.addEventListener('click', (e) => { e.preventDefault(); showView('inicio'); });
+    navEstrategIA.addEventListener('click', (e) => { e.preventDefault(); showView('estrategia'); });
+
+    // --- CONFIGURA LISTENERS DE DADOS (ONSNAPSHOT) ---
+    // O onSnapshot atualiza os dados em tempo real
+
+    // 1. Saldo Inicial (Settings)
+    onSnapshot(settingsDocRef, (doc) => {
+        if (doc.exists()) {
+            initialBalance = doc.data().initialBalance || 0;
+        } else {
+            initialBalance = 0; // Nenhum documento de settings ainda
         }
-        
-        // --- Inicialização ---
-        document.addEventListener('DOMContentLoaded', async () => {
-            
-            // PRIMEIRO: Autentica e prepara o Firebase
-            await initializeFirebase();
-            
-            // SEGUNDO: Carrega os jogos (agora que 'gamesCollection' está definida)
-            await loadAllGames();
-            
-            // TERCEIRO: Configura os listeners da UI
-            document.querySelectorAll('.league-card').forEach(card => {
-                if (card.dataset.menu === 'analise-jogo') {
-                    card.addEventListener('click', () => {
-                        renderJogoLeagueMosaic();
-                        showView(jogoLeagueMosaicView);
-                    });
-                } else if (card.dataset.menu === 'analise-time') {
-                    card.addEventListener('click', () => {
-                        renderLeagueMosaic();
-                        showView(leagueMosaicView);
-                    });
-                } else if (card.dataset.league) {
-                    card.addEventListener('click', () => {
-                        const leagueName = card.dataset.league;
-                        openLeagueView(leagueName);
-                    });
-                }
+        initialBalanceInput.value = initialBalance.toFixed(2);
+        // Atualiza a UI que depende do saldo inicial
+        applyFilter(currentFilter);
+    }, (error) => console.error("Erro ao ouvir settings:", error));
+
+    // 2. Apostas Reais (Bets)
+    onSnapshot(query(betsCollectionRef, orderBy('createdAt', 'desc')), (snapshot) => {
+        allBets = [];
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            allBets.push({ 
+                id: doc.id, // ID do Documento Firestore
+                ...data,
+                // Converte Timestamp do Firebase para Date do JS
+                createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
             });
-            
-            // Listeners para navegação
-            backToLeagueMosaicBtn.addEventListener('click', () => {
-                showView(leagueMosaicView);
-            });
-            backToTeamMosaicBtn.addEventListener('click', () => {
-                const leagueName = currentLeague;
-                showTeamMosaic(leagueName);
-            });
-            backToJogoLeagueMosaicBtn.addEventListener('click', () => {
-                showView(jogoLeagueMosaicView);
-            });
-            backToJogoTeamSelectBtn.addEventListener('click', () => {
-                const leagueName = currentJogoLeague;
-                showJogoTeamSelect(leagueName);
-            });
-            analyzeJogoBtn.addEventListener('click', analyzeJogo);
-            
-            // Listener do formulário
-            gameForm.addEventListener('submit', handleSaveGame);
-            
-            // Mostra a tela inicial de boas-vindas
-            showView(welcomeView);
         });
+        // Após atualizar os dados, re-renderiza tudo
+        applyFilter(currentFilter);
+    }, (error) => console.error("Erro ao ouvir 'bets':", error));
+
+    // 3. Apostas Potenciais
+    onSnapshot(query(potentialBetsCollectionRef, orderBy('createdAt', 'desc')), (snapshot) => {
+        allPotentialBets = [];
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            allPotentialBets.push({ 
+                id: doc.id, 
+                ...data,
+                createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
+            });
+        });
+        applyFilter(currentFilter);
+    }, (error) => console.error("Erro ao ouvir 'potentialBets':", error));
     
-    </script>
-</body>
-</html>
+    // 4. Simulação Estratégia 1
+    onSnapshot(query(simBets1CollectionRef, orderBy('createdAt', 'desc')), (snapshot) => {
+        strategy1Bets = [];
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            strategy1Bets.push({ 
+                id: doc.id, 
+                ...data,
+                createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
+            });
+        });
+        // Re-renderiza a UI dessa estratégia
+        renderStrategySimulation(1);
+    }, (error) => console.error("Erro ao ouvir 'simBets1':", error));
+
+    // 5. Simulação Estratégia 2
+    onSnapshot(query(simBets2CollectionRef, orderBy('createdAt', 'desc')), (snapshot) => {
+        strategy2Bets = [];
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            strategy2Bets.push({ 
+                id: doc.id, 
+                ...data,
+                createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
+            });
+        });
+        renderStrategySimulation(2);
+    }, (error) => console.error("Erro ao ouvir 'simBets2':", error));
+
+    // 6. Simulação Estratégia 3
+    onSnapshot(query(simBets3CollectionRef, orderBy('createdAt', 'desc')), (snapshot) => {
+        strategy3Bets = [];
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            strategy3Bets.push({ 
+                id: doc.id, 
+                ...data,
+                createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
+            });
+        });
+        renderStrategySimulation(3);
+    }, (error) => console.error("Erro ao ouvir 'simBets3':", error));
+
+
+    // --- FUNÇÕES DE LÓGICA (MODIFICADAS PARA FIREBASE) ---
+
+    // Salva o Saldo Inicial no Firestore
+    async function saveInitialBalance() {
+        const newBalance = parseFloat(initialBalanceInput.value) || 0;
+        try {
+            await setDoc(settingsDocRef, { initialBalance: newBalance }, { merge: true });
+            console.log("Saldo inicial salvo!");
+            initialBalance = newBalance; // Atualiza o estado local
+            initialBalanceInput.value = initialBalance.toFixed(2);
+            applyFilter(currentFilter); // Atualiza tudo
+        } catch (error) {
+            console.error("Erro ao salvar saldo inicial: ", error);
+        }
+    }
+
+    // Adiciona uma Aposta Real
+    async function addBet(e) {
+        e.preventDefault();
+        const description = descriptionInput.value || 'Aposta';
+        const amount = parseFloat(amountInput.value);
+        const returned_actual = parseFloat(returnInput.value);
+        if (isNaN(amount) || isNaN(returned_actual) || amount < 0 || returned_actual < 0) return;
+        const profit_actual = returned_actual - amount;
+        
+        const newBet = { 
+            description, 
+            amount, 
+            returned_actual, 
+            profit_actual,
+            createdAt: serverTimestamp() // Usa o timestamp do servidor
+        };
+        
+        try {
+            await addDoc(betsCollectionRef, newBet);
+            console.log("Aposta real adicionada!");
+            betForm.reset();
+            descriptionInput.focus();
+        } catch (error) {
+            console.error("Erro ao adicionar aposta real: ", error);
+        }
+    }
+    
+    // Adiciona uma Aposta Potencial
+    async function addPotentialBet(e) {
+        e.preventDefault();
+        const amount = parseFloat(potentialAmountInput.value);
+        const returned_potential = parseFloat(potentialReturnInput.value);
+        if (isNaN(amount) || isNaN(returned_potential) || amount < 0 || returned_potential < 0) return;
+        const profit_potential = returned_potential - amount;
+        
+        const newPotentialBet = { 
+            amount, 
+            returned_potential, 
+            profit_potential,
+            createdAt: serverTimestamp()
+        };
+
+        try {
+            await addDoc(potentialBetsCollectionRef, newPotentialBet);
+            console.log("Aposta potencial adicionada!");
+            potentialBetForm.reset();
+            potentialAmountInput.focus();
+        } catch (error) {
+            console.error("Erro ao adicionar aposta potencial: ", error);
+        }
+    }
+
+    // Deleta uma Aposta Real
+    window.deleteBet = async function(id) {
+        if (!id) return console.error("ID inválido para exclusão");
+        try {
+            await deleteDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/bets`, id));
+            console.log("Aposta real deletada!");
+        } catch (error) {
+            console.error("Erro ao deletar aposta real: ", error);
+        }
+    }
+
+    // Deleta uma Aposta Potencial
+    window.deletePotentialBet = async function(id) {
+        if (!id) return console.error("ID inválido para exclusão");
+        try {
+            await deleteDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/potentialBets`, id));
+            console.log("Aposta potencial deletada!");
+        } catch (error) {
+            console.error("Erro ao deletar aposta potencial: ", error);
+        }
+    }
+
+    // Registra o resultado (Green/Red) na Simulação
+    async function recordSimBet(index, resultType) {
+        const tempBet = getTempSimBet(index);
+        if (tempBet.stake <= 0 || tempBet.odd <= 0) return; // Não registra se inválido
+        
+        let targetCollection;
+        if (index === 1) targetCollection = simBets1CollectionRef;
+        else if (index === 2) targetCollection = simBets2CollectionRef;
+        else targetCollection = simBets3CollectionRef;
+
+        const newBet = {
+            stake: tempBet.stake,
+            odd: tempBet.odd,
+            result: resultType,
+            profit: (resultType === 'green') ? tempBet.profit : tempBet.loss,
+            createdAt: serverTimestamp()
+        };
+        
+        try {
+            await addDoc(targetCollection, newBet);
+            console.log(`Simulação (Est. ${index}) adicionada!`);
+            // Limpa o formulário e reseta
+            document.getElementById(`sim-form-${index}`).reset();
+            calculateSimReturn(index);
+            // O onSnapshot vai cuidar da atualização da UI
+        } catch (error) {
+            console.error(`Erro ao adicionar simulação (Est. ${index}): `, error);
+        }
+    }
+
+    // Deleta uma Simulação
+    window.deleteSimBet = async function(index, id) {
+        if (!id) return console.error("ID inválido para exclusão");
+        
+        let targetCollectionPath;
+        if (index === 1) targetCollectionPath = `simBets1`;
+        else if (index === 2) targetCollectionPath = `simBets2`;
+        else targetCollectionPath = `simBets3`;
+        
+        try {
+            await deleteDoc(doc(db, `artifacts/${appId}/users/${currentUserId}/${targetCollectionPath}`, id));
+            console.log(`Simulação (Est. ${index}) deletada!`);
+            // O onSnapshot vai cuidar da atualização da UI
+        } catch (error) {
+            console.error(`Erro ao deletar simulação (Est. ${index}): `, error);
+        }
+    }
+
+
+    // --- EVENT LISTENERS (Formulários, Filtros, etc) ---
+    // (O onSnapshot já lida com a atualização dos dados,
+    // então os event listeners agora apenas *enviam* dados para o Firebase)
+    initialBalanceInput.addEventListener('blur', saveInitialBalance);
+    betForm.addEventListener('submit', addBet);
+    potentialBetForm.addEventListener('submit', addPotentialBet);
+
+    filterAllBtn.addEventListener('click', () => applyFilter('all'));
+    filterTodayBtn.addEventListener('click', () => applyFilter('today'));
+    filterWeekBtn.addEventListener('click', () => applyFilter('week'));
+    filterMonthBtn.addEventListener('click', () => applyFilter('month'));
+
+    // Estratégia 1
+    document.getElementById('sim-stake-1').addEventListener('input', () => calculateSimReturn(1));
+    document.getElementById('sim-odd-1').addEventListener('input', () => calculateSimReturn(1));
+    document.getElementById('sim-green-1').addEventListener('click', () => recordSimBet(1, 'green'));
+    document.getElementById('sim-red-1').addEventListener('click', () => recordSimBet(1, 'red'));
+    
+    // Estratégia 2
+    document.getElementById('sim-stake-2').addEventListener('input', () => calculateSimReturn(2));
+    document.getElementById('sim-odd-2').addEventListener('input', () => calculateSimReturn(2));
+    document.getElementById('sim-green-2').addEventListener('click', () => recordSimBet(2, 'green'));
+    document.getElementById('sim-red-2').addEventListener('click', () => recordSimBet(2, 'red'));
+    
+    // Estratégia 3
+    document.getElementById('sim-stake-3').addEventListener('input', () => calculateSimReturn(3));
+    document.getElementById('sim-odd-3').addEventListener('input', () => calculateSimReturn(3));
+    document.getElementById('sim-green-3').addEventListener('click', () => recordSimBet(3, 'green'));
+    document.getElementById('sim-red-3').addEventListener('click', () => recordSimBet(3, 'red'));
+
+    
+    // --- FUNÇÕES DE RENDERIZAÇÃO (Quase inalteradas, mas agora usam 'allBets' global) ---
+    
+    function showView(viewId) {
+        viewInicio.classList.add('hidden');
+        viewEstrategia.classList.add('hidden');
+        navLinks.forEach(link => {
+            link.classList.remove('text-green-400', 'font-bold');
+            link.classList.add('text-gray-300', 'hover:text-white');
+        });
+        
+        if (viewId === 'inicio') {
+            viewInicio.classList.remove('hidden');
+            navInicio.classList.add('text-green-400', 'font-bold');
+            navInicio.classList.remove('text-gray-300', 'hover:text-white');
+            // Re-renderiza gráficos principais ao mostrar a view
+            renderBalanceChart();
+            renderPotentialChart();
+        } else if (viewId === 'estrategia') {
+            viewEstrategia.classList.remove('hidden');
+            navEstrategia.classList.add('text-green-400', 'font-bold');
+            navEstrategia.classList.remove('text-gray-300', 'hover:text-white');
+            // Re-renderiza gráficos de simulação ao mostrar a view
+            renderStrategySimulation(1);
+            renderStrategySimulation(2);
+            renderStrategySimulation(3);
+        }
+    }
+
+    function formatCurrency(value) {
+        const isNegative = value < 0;
+        const formatted = Math.abs(value).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+        return isNegative ? `-${formatted}` : formatted;
+    }
+
+    function getFilterStartDate(filterType) {
+        switch (filterType) {
+            case 'today': return startOfDay;
+            case 'week': return startOfWeek;
+            case 'month': return startOfMonth;
+            default: return new Date(0); // Epoch start (inclui tudo)
+        }
+    }
+    
+    function getProfitClass(value) {
+        return value > 0 ? 'text-green-600' : (value < 0 ? 'text-red-600' : 'text-gray-500');
+    }
+
+    function applyFilter(filterType) {
+        currentFilter = filterType;
+        
+        const filterStartDate = getFilterStartDate(currentFilter);
+
+        // Filtra os dados (que já foram carregados pelo onSnapshot)
+        // **IMPORTANTE**: Agora filtramos por `bet.createdAt` (que é um objeto Date)
+        filteredBets = allBets.filter(bet => bet.createdAt >= filterStartDate);
+        filteredPotentialBets = allPotentialBets.filter(bet => bet.createdAt >= filterStartDate);
+        
+        updateFilterButtons();
+        updateSummary();
+        renderHistory();
+        renderPotentialHistory();
+        renderBalanceChart(); // Gráfico 1 (Real)
+        renderPotentialChart(); // Gráfico 2 (Comparativo)
+    }
+
+    function updateFilterButtons() {
+        const periodTextMap = {
+            'all': '(Período: Tudo)', 'today': '(Período: Hoje)',
+            'week': '(Período: Esta Semana)', 'month': '(Período: Este Mês)',
+        };
+        if (winningsPeriodEl) winningsPeriodEl.textContent = periodTextMap[currentFilter];
+        if (lossesPeriodEl) lossesPeriodEl.textContent = periodTextMap[currentFilter];
+
+        filterButtons.forEach(btn => {
+            if(btn) {
+                btn.classList.remove('bg-green-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+            }
+        });
+        
+        let activeBtn;
+        if (currentFilter === 'today') activeBtn = filterTodayBtn;
+        else if (currentFilter === 'week') activeBtn = filterWeekBtn;
+        else if (currentFilter === 'month') activeBtn = filterMonthBtn;
+        else activeBtn = filterAllBtn;
+        
+        if(activeBtn) {
+            activeBtn.classList.add('bg-green-600', 'text-white');
+            activeBtn.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+        }
+    }
+
+    function updateSummary() {
+        // Usa 'filteredBets' (baseado no período)
+        let filteredWinnings = 0, filteredLosses = 0;
+        filteredBets.forEach(bet => {
+            if (bet.profit_actual > 0) filteredWinnings += bet.profit_actual;
+            else filteredLosses += bet.profit_actual;
+        });
+        totalWinningsEl.textContent = formatCurrency(filteredWinnings);
+        totalLossesEl.textContent = formatCurrency(filteredLosses);
+
+        // Usa 'allBets' (completo) para o saldo total
+        let totalProfitLoss = 0;
+        allBets.forEach(bet => { totalProfitLoss += bet.profit_actual; });
+        const totalBalance = initialBalance + totalProfitLoss;
+        totalBalanceEl.textContent = formatCurrency(totalBalance);
+
+        totalBalanceEl.classList.remove('text-green-800', 'text-red-800', 'text-blue-800');
+        if (totalBalance > initialBalance) totalBalanceEl.classList.add('text-green-800');
+        else if (totalBalance < initialBalance) totalBalanceEl.classList.add('text-red-800');
+        else totalBalanceEl.classList.add('text-blue-800');
+    }
+
+    function renderHistory() {
+        historyBody.innerHTML = '';
+        if (filteredBets.length === 0) {
+            emptyRow.style.display = 'table-row';
+        } else {
+            emptyRow.style.display = 'none';
+            // Os dados já vêm ordenados do onSnapshot (desc)
+            filteredBets.forEach(bet => {
+                const row = document.createElement('tr');
+                row.classList.add('fade-in');
+                const profitClassActual = getProfitClass(bet.profit_actual);
+                // **IMPORTANTE**: onclick agora usa `bet.id` (string)
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${bet.description || 'Aposta'}</div>
+                        <div class="text-xs text-gray-500">${bet.createdAt.toLocaleString('pt-BR')}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.amount)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.returned_actual)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${profitClassActual}">${formatCurrency(bet.profit_actual)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="deleteBet('${bet.id}')" class="text-red-500 hover:text-red-700" title="Excluir Aposta">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </td>
+                `;
+                historyBody.appendChild(row);
+            });
+        }
+    }
+    
+    function renderPotentialHistory() {
+        potentialHistoryBody.innerHTML = '';
+        if (filteredPotentialBets.length === 0) {
+            emptyPotentialRow.style.display = 'table-row';
+        } else {
+            emptyPotentialRow.style.display = 'none';
+            // Os dados já vêm ordenados do onSnapshot (desc)
+            filteredPotentialBets.forEach(bet => {
+                const row = document.createElement('tr');
+                row.classList.add('fade-in');
+                const profitClassPotential = getProfitClass(bet.profit_potential);
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${bet.createdAt.toLocaleString('pt-BR')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.amount)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatCurrency(bet.returned_potential)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${profitClassPotential}">${formatCurrency(bet.profit_potential)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="deletePotentialBet('${bet.id}')" class="text-red-500 hover:text-red-700" title="Excluir Simulação">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </td>
+                `;
+                potentialHistoryBody.appendChild(row);
+            });
+        }
+    }
+    
+    function renderBalanceChart() {
+        if (balanceChart) balanceChart.destroy();
+        
+        const filterStartDate = getFilterStartDate(currentFilter);
+        
+        // Calcula o saldo antes do período do filtro
+        let balanceBeforeFilter = initialBalance;
+        allBets.forEach(bet => {
+            if (bet.createdAt < filterStartDate) {
+                balanceBeforeFilter += bet.profit_actual;
+            }
+        });
+        
+        // Filtra as apostas *dentro* do período e reverte (para o gráfico)
+        const reversedFilteredBets = [...allBets.filter(bet => bet.createdAt >= filterStartDate)].reverse();
+        
+        const labels = ['Início do Período'];
+        const data = [balanceBeforeFilter];
+        let currentBalance = balanceBeforeFilter;
+        
+        reversedFilteredBets.forEach((bet) => {
+            currentBalance += bet.profit_actual;
+            labels.push(`Aposta (${bet.createdAt.toLocaleDateString('pt-BR')})`);
+            data.push(currentBalance);
+        });
+        
+        if (reversedFilteredBets.length === 0) {
+             labels.push('Fim do Período');
+             data.push(balanceBeforeFilter);
+        }
+        
+        balanceChart = new Chart(balanceChartCtx, { 
+            type: 'line', data: { labels: labels,
+                datasets: [{ label: 'Evolução da Banca (Real)', data: data,
+                    borderColor: (context) => {
+                        const finalBalance = data[data.length - 1] || balanceBeforeFilter;
+                        if(finalBalance > data[0]) return 'rgb(22, 163, 74)';
+                        if(finalBalance < data[0]) return 'rgb(220, 38, 38)';
+                        return 'rgb(37, 99, 235)';
+                    },
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)', fill: true, tension: 0.1, pointRadius: 4, pointBackgroundColor: 'rgb(255, 255, 255)'
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: true,
+                scales: { y: { beginAtZero: false, ticks: { callback: (value) => formatCurrency(value) } }, x: { ticks: { autoSkip: true, maxTicksLimit: 10 } } },
+                plugins: { tooltip: { callbacks: { label: (context) => `${context.dataset.label || ''}: ${formatCurrency(context.parsed.y)}` } } }
+            }
+        });
+    }
+    
+    function renderPotentialChart() {
+        if (potentialBalanceChart) potentialBalanceChart.destroy();
+        
+        const filterStartDate = getFilterStartDate(currentFilter);
+        
+        // Linha "Real"
+        let balanceBeforeFilter_Actual = initialBalance;
+        allBets.forEach(bet => {
+            if (bet.createdAt < filterStartDate) balanceBeforeFilter_Actual += bet.profit_actual;
+        });
+        const reversedFilteredBets = [...allBets.filter(bet => bet.createdAt >= filterStartDate)].reverse();
+        const data_actual = [balanceBeforeFilter_Actual];
+        let currentBalance_Actual = balanceBeforeFilter_Actual;
+
+        // Linha "Potencial"
+        let balanceBeforeFilter_Potential = initialBalance;
+        allPotentialBets.forEach(bet => {
+            if (bet.createdAt < filterStartDate) balanceBeforeFilter_Potential += bet.profit_potential;
+        });
+        const reversedFilteredPotentialBets = [...allPotentialBets.filter(bet => bet.createdAt >= filterStartDate)].reverse();
+        const data_potential = [balanceBeforeFilter_Potential];
+        let currentBalance_Potential = balanceBeforeFilter_Potential;
+
+        const maxLen = Math.max(reversedFilteredBets.length, reversedFilteredPotentialBets.length);
+        const labels = ['Início do Período'];
+        
+        for (let i = 0; i < maxLen; i++) {
+            labels.push(`Evento #${i + 1}`);
+            if (reversedFilteredBets[i]) {
+                currentBalance_Actual += reversedFilteredBets[i].profit_actual;
+            }
+            data_actual.push(currentBalance_Actual);
+            
+            if (reversedFilteredPotentialBets[i]) {
+                currentBalance_Potential += reversedFilteredPotentialBets[i].profit_potential;
+            }
+            data_potential.push(currentBalance_Potential);
+        }
+
+        potentialBalanceChart = new Chart(potentialChartCtx, {
+            type: 'line', data: { labels: labels,
+                datasets: [
+                    { label: 'Saldo Real (Cashout)', data: data_actual, borderColor: 'rgb(37, 99, 235)', backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        fill: false, tension: 0.1, pointRadius: 4, pointBackgroundColor: 'rgb(255, 255, 255)' },
+                    { label: 'Saldo Potencial (Simulado)', data: data_potential, borderColor: 'rgb(22, 163, 74)', backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                        fill: false, tension: 0.1, pointRadius: 4, pointBackgroundColor: 'rgb(255, 255, 255)' }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: true,
+                scales: { y: { beginAtZero: false, ticks: { callback: (value) => formatCurrency(value) } }, x: { ticks: { autoSkip: true, maxTicksLimit: 10 } } },
+                plugins: { tooltip: { callbacks: { label: (context) => `${context.dataset.label || ''}: ${formatCurrency(context.parsed.y)}` } } }
+            }
+        });
+    }
+
+
+    // --- LÓGICA: SIMULAÇÃO DE ESTRATÉGIA (Quase inalterada) ---
+    
+    // Estado temporário (para os formulários)
+    let tempSimBet1 = { stake: 0, odd: 0, profit: 0, loss: 0 };
+    let tempSimBet2 = { stake: 0, odd: 0, profit: 0, loss: 0 };
+    let tempSimBet3 = { stake: 0, odd: 0, profit: 0, loss: 0 };
+
+    function getStrategyBetList(index) {
+        if (index === 1) return strategy1Bets;
+        if (index === 2) return strategy2Bets;
+        if (index === 3) return strategy3Bets;
+    }
+    
+    function getTempSimBet(index) {
+        if (index === 1) return tempSimBet1;
+        if (index === 2) return tempSimBet2;
+        if (index === 3) return tempSimBet3;
+    }
+
+    function calculateSimReturn(index) {
+        const stakeInput = document.getElementById(`sim-stake-${index}`);
+        const oddInput = document.getElementById(`sim-odd-${index}`);
+        const returnEl = document.getElementById(`sim-return-${index}`);
+        const greenBtn = document.getElementById(`sim-green-${index}`);
+        const redBtn = document.getElementById(`sim-red-${index}`);
+        
+        const stake = parseFloat(stakeInput.value) || 0;
+        const odd = parseFloat(oddInput.value) || 0;
+        
+        const potentialReturn = stake * odd;
+        const profit = potentialReturn - stake;
+        const loss = -stake;
+        
+        const tempBet = getTempSimBet(index);
+        tempBet.stake = stake;
+        tempBet.odd = odd;
+        tempBet.profit = profit;
+        tempBet.loss = loss;
+        
+        returnEl.textContent = formatCurrency(potentialReturn);
+        
+        if (stake > 0 && odd > 0) {
+            greenBtn.disabled = false;
+            redBtn.disabled = false;
+        } else {
+            greenBtn.disabled = true;
+            redBtn.disabled = true;
+        }
+    }
+    
+    function renderStrategySimulation(index) {
+        const betList = getStrategyBetList(index); // Pega os dados globais atualizados pelo onSnapshot
+        const chartCtx = document.getElementById(`sim-chart-${index}`).getContext('2d');
+        let chartInstance = null;
+        if (index === 1) chartInstance = simChart1;
+        if (index === 2) chartInstance = simChart2;
+        if (index === 3) chartInstance = simChart3;
+
+        const summaryEl = document.getElementById(`sim-summary-${index}`);
+        const historyBody = document.getElementById(`sim-history-${index}`);
+        
+        // 1. Renderizar Tabela de Histórico (Últimos 5)
+        historyBody.innerHTML = '';
+        if (betList.length === 0) {
+            historyBody.innerHTML = `<tr><td colspan="3" class="p-2 text-center text-gray-500">Nenhuma simulação.</td></tr>`;
+        } else {
+            const recentBets = betList.slice(0, 5); // Pega os 5 mais recentes (já está ordenado desc)
+            recentBets.forEach(bet => {
+                const row = document.createElement('tr');
+                const profitClass = getProfitClass(bet.profit);
+                const resultClass = bet.result === 'green' ? 'text-green-600 font-medium' : 'text-red-600 font-medium';
+                row.classList.add('fade-in');
+                // **IMPORTANTE**: onclick agora usa `bet.id` (string)
+                row.innerHTML = `
+                    <td class="p-2 ${resultClass}">${bet.result === 'green' ? 'Green' : 'Red'}</td>
+                    <td class="p-2 ${profitClass}">${formatCurrency(bet.profit)}</td>
+                    <td class="p-2 text-right">
+                        <button onclick="deleteSimBet(${index}, '${bet.id}')" class="text-gray-400 hover:text-red-500" title="Excluir">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </td>
+                `;
+                historyBody.appendChild(row);
+            });
+        }
+        
+        // 2. Renderizar Sumário
+        const totalProfit = betList.reduce((acc, bet) => acc + bet.profit, 0);
+        summaryEl.textContent = `Lucro Total: ${formatCurrency(totalProfit)}`;
+        summaryEl.className = `text-lg font-bold ${getProfitClass(totalProfit)}`;
+        
+        // 3. Renderizar Gráfico
+        if (chartInstance) chartInstance.destroy();
+        
+        const labels = ['Início'];
+        const data = [0];
+        let currentProfit = 0;
+        
+        // Inverte para calcular do mais antigo para o mais novo
+        [...betList].reverse().forEach(bet => {
+            currentProfit += bet.profit;
+            labels.push(bet.createdAt.toLocaleDateString('pt-BR'));
+            data.push(currentProfit);
+        });
+
+        chartInstance = new Chart(chartCtx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: `Evolução (Est. ${index})`,
+                    data: data,
+                    borderColor: totalProfit > 0 ? 'rgb(22, 163, 74)' : (totalProfit < 0 ? 'rgb(220, 38, 38)' : 'rgb(107, 114, 128)'),
+                    backgroundColor: totalProfit > 0 ? 'rgba(22, 163, 74, 0.1)' : (totalProfit < 0 ? 'rgba(220, 38, 38, 0.1)' : 'rgba(107, 114, 128, 0.1)'),
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true,
+                plugins: { legend: { display: false } },
+                scales: { 
+                    y: { ticks: { callback: (value) => formatCurrency(value) } }, 
+                    x: { ticks: { autoSkip: true, maxTicksLimit: 6 } } 
+                },
+                plugins: { tooltip: { callbacks: { label: (context) => `Lucro: ${formatCurrency(context.parsed.y)}` } } }
+            }
+        });
+        
+        // Armazena a instância do gráfico
+        if (index === 1) simChart1 = chartInstance;
+        if (index === 2) simChart2 = chartInstance;
+        if (index === 3) simChart3 = chartInstance;
+    }
+}
