@@ -185,7 +185,7 @@ function initializeAppLogic(userId) {
     }, (error) => console.error("Erro ao ouvir settings:", error));
 
     // 2. Apostas Reais (Bets)
-    onSnapshot(query(betsCollectionRef, orderBy('createdAt', 'desc')), (snapshot) => {
+    onSnapshot(query(betsCollectionRef), (snapshot) => { // REMOVIDO: orderBy('createdAt', 'desc')
         allBets = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
@@ -196,12 +196,14 @@ function initializeAppLogic(userId) {
                 createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
             });
         });
+        // (NOVO) Ordena os dados no JavaScript (mais novo primeiro)
+        allBets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         // Após atualizar os dados, re-renderiza tudo
         applyFilter(currentFilter);
     }, (error) => console.error("Erro ao ouvir 'bets':", error));
 
     // 3. Apostas Potenciais
-    onSnapshot(query(potentialBetsCollectionRef, orderBy('createdAt', 'desc')), (snapshot) => {
+    onSnapshot(query(potentialBetsCollectionRef), (snapshot) => { // REMOVIDO: orderBy('createdAt', 'desc')
         allPotentialBets = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
@@ -211,11 +213,13 @@ function initializeAppLogic(userId) {
                 createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
             });
         });
+        // (NOVO) Ordena os dados no JavaScript (mais novo primeiro)
+        allPotentialBets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         applyFilter(currentFilter);
     }, (error) => console.error("Erro ao ouvir 'potentialBets':", error));
     
     // 4. Simulação Estratégia 1
-    onSnapshot(query(simBets1CollectionRef, orderBy('createdAt', 'desc')), (snapshot) => {
+    onSnapshot(query(simBets1CollectionRef), (snapshot) => { // REMOVIDO: orderBy('createdAt', 'desc')
         strategy1Bets = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
@@ -225,12 +229,14 @@ function initializeAppLogic(userId) {
                 createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
             });
         });
+        // (NOVO) Ordena os dados no JavaScript (mais novo primeiro)
+        strategy1Bets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         // Re-renderiza a UI dessa estratégia
         renderStrategySimulation(1);
     }, (error) => console.error("Erro ao ouvir 'simBets1':", error));
 
     // 5. Simulação Estratégia 2
-    onSnapshot(query(simBets2CollectionRef, orderBy('createdAt', 'desc')), (snapshot) => {
+    onSnapshot(query(simBets2CollectionRef), (snapshot) => { // REMOVIDO: orderBy('createdAt', 'desc')
         strategy2Bets = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
@@ -240,11 +246,13 @@ function initializeAppLogic(userId) {
                 createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
             });
         });
+        // (NOVO) Ordena os dados no JavaScript (mais novo primeiro)
+        strategy2Bets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         renderStrategySimulation(2);
     }, (error) => console.error("Erro ao ouvir 'simBets2':", error));
 
     // 6. Simulação Estratégia 3
-    onSnapshot(query(simBets3CollectionRef, orderBy('createdAt', 'desc')), (snapshot) => {
+    onSnapshot(query(simBets3CollectionRef), (snapshot) => { // REMOVIDO: orderBy('createdAt', 'desc')
         strategy3Bets = [];
         snapshot.forEach((doc) => {
             const data = doc.data();
@@ -254,6 +262,8 @@ function initializeAppLogic(userId) {
                 createdAt: data.createdAt ? data.createdAt.toDate() : new Date() 
             });
         });
+        // (NOVO) Ordena os dados no JavaScript (mais novo primeiro)
+        strategy3Bets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         renderStrategySimulation(3);
     }, (error) => console.error("Erro ao ouvir 'simBets3':", error));
 
