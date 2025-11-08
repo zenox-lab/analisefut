@@ -167,7 +167,7 @@ function initializeAppLogic(userId) {
 
     // --- CONFIGURA OS LISTENERS DE NAVEGAÇÃO ---
     navInicio.addEventListener('click', (e) => { e.preventDefault(); showView('inicio'); });
-    navEstrategIA.addEventListener('click', (e) => { e.preventDefault(); showView('estrategia'); });
+    navEstrategia.addEventListener('click', (e) => { e.preventDefault(); showView('estrategia'); }); // CORRIGIDO: Era navEstrategIA
 
     // --- CONFIGURA LISTENERS DE DADOS (ONSNAPSHOT) ---
     // O onSnapshot atualiza os dados em tempo real
