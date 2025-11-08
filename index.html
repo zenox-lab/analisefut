@@ -592,9 +592,10 @@
     </div>
 
     <!-- Carrega os SDKs do Firebase -->
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" type="module"></script>
+    <!-- REMOVIDO: Os scripts do Firebase (app-compat, auth-compat, firestore-compat) foram removidos.
+         Eles não são necessários aqui porque o 'app.js' (abaixo) já os importa 
+         usando a sintaxe 'import ... from "https://..."'. 
+         Manter os dois pode causar conflitos. -->
 
     <!-- Carrega o arquivo JavaScript como um módulo -->
     <script type="module" src="app.js" defer></script>
